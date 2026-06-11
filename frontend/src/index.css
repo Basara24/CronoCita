@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Paleta CronoCita: azul médico, verde menta e branco */
+    --background: 210 40% 98%;
+    --foreground: 215 35% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 35% 15%;
+
+    --primary: 210 85% 42%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 207 50% 94%;
+    --secondary-foreground: 210 70% 30%;
+
+    --mint: 160 60% 45%;
+    --mint-foreground: 0 0% 100%;
+
+    --muted: 210 30% 94%;
+    --muted-foreground: 215 18% 45%;
+
+    --accent: 160 55% 92%;
+    --accent-foreground: 160 70% 22%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 25% 88%;
+    --input: 214 25% 88%;
+    --ring: 210 85% 42%;
+
+    --radius: 0.625rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}

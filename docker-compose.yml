@@ -1,0 +1,55 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: cronocita-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: cronocita
+      MYSQL_USER: cronocita
+      MYSQL_PASSWORD: cronocita
+    ports:
+      # 3307 no host para não conflitar com um MySQL local
+      - '3307:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-uroot', '-proot']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    container_name: cronocita-backend
+    restart: unless-stopped
+    environment:
+      PORT: 3333
+      NODE_ENV: production
+      TZ: America/Sao_Paulo
+      DATABASE_URL: mysql://cronocita:cronocita@mysql:3306/cronocita
+      JWT_SECRET: cronocita-access-secret-change-me
+      JWT_REFRESH_SECRET: cronocita-refresh-secret-change-me
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN_DAYS: 7
+      NOTIFICATION_PROVIDER: whatsapp
+    ports:
+      - '3333:3333'
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:3333/api
+    container_name: cronocita-frontend
+    restart: unless-stopped
+    ports:
+      - '5173:80'
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
