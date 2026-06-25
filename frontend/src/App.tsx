@@ -1,8 +1,12 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { SuperAdminLayout } from '@/components/layout/SuperAdminLayout';
+import { PatientLayout } from '@/components/layout/PatientLayout';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
-import { useAuth } from '@/lib/auth';
 import { Login } from '@/pages/Login';
+import { Register } from '@/pages/Register';
+import { ForgotPassword } from '@/pages/ForgotPassword';
+import { Chat } from '@/pages/Chat';
 import { Dashboard } from '@/pages/Dashboard';
 import { Agenda } from '@/pages/Agenda';
 import { Patients } from '@/pages/Patients';
@@ -12,46 +16,82 @@ import { Equipments } from '@/pages/Equipments';
 import { Services } from '@/pages/Services';
 import { Financial } from '@/pages/Financial';
 import { Reports } from '@/pages/Reports';
+import { Home } from '@/pages/public/Home';
+import { ClinicPage } from '@/pages/public/ClinicPage';
 import { PublicBooking } from '@/pages/public/Booking';
-
-function HomeRedirect() {
-  const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
-  return user.role === 'ADMIN' ? <Dashboard /> : <Navigate to="/agenda" replace />;
-}
+import { AdminDashboard } from '@/pages/admin/AdminDashboard';
+import { Clinics } from '@/pages/admin/Clinics';
+import { AdminUsers } from '@/pages/admin/AdminUsers';
+import { Subscriptions } from '@/pages/admin/Subscriptions';
+import { AdminReports } from '@/pages/admin/AdminReports';
+import { AdminSettings } from '@/pages/admin/AdminSettings';
+import { PatientDashboardPage } from '@/pages/patient/Dashboard';
+import { PatientProfilePage } from '@/pages/patient/Profile';
+import { PatientAppointmentsPage } from '@/pages/patient/Appointments';
+import { PatientNotificationsPage } from '@/pages/patient/Notifications';
 
 export default function App() {
   return (
     <Routes>
+      {/* Marketplace público */}
+      <Route path="/" element={<Home />} />
+      <Route path="/clinica/:slug" element={<ClinicPage />} />
+      <Route path="/clinica/:slug/agendar" element={<PublicBooking />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/agendar" element={<PublicBooking />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/recuperar-senha" element={<ForgotPassword />} />
 
-      <Route element={<ProtectedRoute />}>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<HomeRedirect />} />
-          <Route path="/agenda" element={<Agenda />} />
+      {/* Portal do Paciente (PATIENT) */}
+      <Route element={<ProtectedRoute roles={['PATIENT']} />}>
+        <Route element={<PatientLayout />}>
+          <Route path="/minha-conta" element={<PatientDashboardPage />} />
+          <Route path="/meus-agendamentos" element={<PatientAppointmentsPage />} />
+          <Route path="/perfil" element={<PatientProfilePage />} />
+          <Route path="/notificacoes" element={<PatientNotificationsPage />} />
+          <Route path="/mensagens" element={<Chat />} />
         </Route>
       </Route>
 
-      <Route element={<ProtectedRoute roles={['ADMIN', 'SECRETARY']} />}>
+      {/* Área da clínica (CLINIC_ADMIN / SECRETARY / PROFESSIONAL) */}
+      <Route element={<ProtectedRoute roles={['CLINIC_ADMIN', 'SECRETARY', 'PROFESSIONAL']} />}>
         <Route element={<AppLayout />}>
-          <Route path="/pacientes" element={<Patients />} />
+          <Route path="/painel/agenda" element={<Agenda />} />
+          <Route path="/painel/mensagens" element={<Chat />} />
         </Route>
       </Route>
 
-      <Route element={<ProtectedRoute roles={['ADMIN']} />}>
+      <Route element={<ProtectedRoute roles={['CLINIC_ADMIN', 'SECRETARY']} />}>
         <Route element={<AppLayout />}>
-          <Route path="/profissionais" element={<Professionals />} />
-          <Route path="/salas" element={<Rooms />} />
-          <Route path="/equipamentos" element={<Equipments />} />
-          <Route path="/servicos" element={<Services />} />
-          <Route path="/relatorios" element={<Reports />} />
+          <Route path="/painel/pacientes" element={<Patients />} />
         </Route>
       </Route>
 
-      <Route element={<ProtectedRoute roles={['ADMIN', 'PROFESSIONAL']} />}>
+      <Route element={<ProtectedRoute roles={['CLINIC_ADMIN']} />}>
         <Route element={<AppLayout />}>
-          <Route path="/financeiro" element={<Financial />} />
+          <Route path="/painel" element={<Dashboard />} />
+          <Route path="/painel/profissionais" element={<Professionals />} />
+          <Route path="/painel/salas" element={<Rooms />} />
+          <Route path="/painel/equipamentos" element={<Equipments />} />
+          <Route path="/painel/servicos" element={<Services />} />
+          <Route path="/painel/relatorios" element={<Reports />} />
+        </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute roles={['CLINIC_ADMIN', 'PROFESSIONAL']} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/painel/financeiro" element={<Financial />} />
+        </Route>
+      </Route>
+
+      {/* Área da plataforma (SUPER_ADMIN) */}
+      <Route element={<ProtectedRoute roles={['SUPER_ADMIN']} />}>
+        <Route element={<SuperAdminLayout />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/clinicas" element={<Clinics />} />
+          <Route path="/admin/usuarios" element={<AdminUsers />} />
+          <Route path="/admin/assinaturas" element={<Subscriptions />} />
+          <Route path="/admin/relatorios" element={<AdminReports />} />
+          <Route path="/admin/configuracoes" element={<AdminSettings />} />
         </Route>
       </Route>
 

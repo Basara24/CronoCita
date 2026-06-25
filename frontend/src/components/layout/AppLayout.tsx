@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageSquare,
   Stethoscope,
   Users,
   Wallet,
@@ -27,19 +28,21 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN'] },
-  { to: '/agenda', label: 'Agenda', icon: CalendarDays, roles: ['ADMIN', 'SECRETARY', 'PROFESSIONAL', 'PATIENT'] },
-  { to: '/pacientes', label: 'Pacientes', icon: Users, roles: ['ADMIN', 'SECRETARY'] },
-  { to: '/profissionais', label: 'Profissionais', icon: Stethoscope, roles: ['ADMIN'] },
-  { to: '/salas', label: 'Salas', icon: DoorOpen, roles: ['ADMIN'] },
-  { to: '/equipamentos', label: 'Equipamentos', icon: Box, roles: ['ADMIN'] },
-  { to: '/servicos', label: 'Serviços', icon: ClipboardList, roles: ['ADMIN'] },
-  { to: '/financeiro', label: 'Financeiro', icon: Wallet, roles: ['ADMIN', 'PROFESSIONAL'] },
-  { to: '/relatorios', label: 'Relatórios', icon: BarChart3, roles: ['ADMIN'] },
+  { to: '/painel', label: 'Dashboard', icon: LayoutDashboard, roles: ['CLINIC_ADMIN'] },
+  { to: '/painel/agenda', label: 'Agenda', icon: CalendarDays, roles: ['CLINIC_ADMIN', 'SECRETARY', 'PROFESSIONAL'] },
+  { to: '/painel/pacientes', label: 'Pacientes', icon: Users, roles: ['CLINIC_ADMIN', 'SECRETARY'] },
+  { to: '/painel/profissionais', label: 'Profissionais', icon: Stethoscope, roles: ['CLINIC_ADMIN'] },
+  { to: '/painel/salas', label: 'Salas', icon: DoorOpen, roles: ['CLINIC_ADMIN'] },
+  { to: '/painel/equipamentos', label: 'Equipamentos', icon: Box, roles: ['CLINIC_ADMIN'] },
+  { to: '/painel/servicos', label: 'Serviços', icon: ClipboardList, roles: ['CLINIC_ADMIN'] },
+  { to: '/painel/mensagens', label: 'Mensagens', icon: MessageSquare, roles: ['CLINIC_ADMIN', 'PROFESSIONAL'] },
+  { to: '/painel/financeiro', label: 'Financeiro', icon: Wallet, roles: ['CLINIC_ADMIN', 'PROFESSIONAL'] },
+  { to: '/painel/relatorios', label: 'Relatórios', icon: BarChart3, roles: ['CLINIC_ADMIN'] },
 ];
 
 const ROLE_LABELS: Record<Role, string> = {
-  ADMIN: 'Administrador',
+  SUPER_ADMIN: 'Super Admin',
+  CLINIC_ADMIN: 'Administrador',
   SECRETARY: 'Secretária',
   PROFESSIONAL: 'Profissional',
   PATIENT: 'Paciente',
@@ -76,7 +79,7 @@ export function AppLayout() {
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.to === '/'}
+            end={item.to === '/painel'}
             onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
               cn(

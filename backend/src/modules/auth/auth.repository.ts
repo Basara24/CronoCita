@@ -1,10 +1,23 @@
-import { PasswordResetToken, RefreshToken, User } from '@prisma/client';
+import { PasswordResetToken, Prisma, RefreshToken } from '@prisma/client';
 import { prisma } from '../../shared/database/prisma';
 
+export type UserWithClinic = Prisma.UserGetPayload<{ include: { clinic: true } }>;
+
+export interface CreatePatientUserData {
+  name: string;
+  email: string;
+  cpf: string;
+  phone: string;
+  password: string;
+  role: 'PATIENT';
+}
+
 export interface IAuthRepository {
-  findUserByEmail(email: string): Promise<User | null>;
-  findUserById(id: string): Promise<User | null>;
-  createUser(data: { name: string; email: string; password: string; role: 'PATIENT' }): Promise<User>;
+  findUserByEmail(email: string): Promise<UserWithClinic | null>;
+  findUserByCpf(cpf: string): Promise<UserWithClinic | null>;
+  findUserById(id: string): Promise<UserWithClinic | null>;
+  createUser(data: CreatePatientUserData): Promise<UserWithClinic>;
+  linkPatientsByCpf(cpf: string, userId: string): Promise<void>;
   saveRefreshToken(data: { token: string; userId: string; expiresAt: Date }): Promise<RefreshToken>;
   findRefreshToken(token: string): Promise<RefreshToken | null>;
   deleteRefreshToken(id: string): Promise<void>;
@@ -15,16 +28,28 @@ export interface IAuthRepository {
 }
 
 export class AuthRepository implements IAuthRepository {
-  async findUserByEmail(email: string): Promise<User | null> {
-    return prisma.user.findUnique({ where: { email } });
+  async findUserByEmail(email: string): Promise<UserWithClinic | null> {
+    return prisma.user.findUnique({ where: { email }, include: { clinic: true } });
   }
 
-  async findUserById(id: string): Promise<User | null> {
-    return prisma.user.findUnique({ where: { id } });
+  async findUserByCpf(cpf: string): Promise<UserWithClinic | null> {
+    return prisma.user.findUnique({ where: { cpf }, include: { clinic: true } });
   }
 
-  async createUser(data: { name: string; email: string; password: string; role: 'PATIENT' }): Promise<User> {
-    return prisma.user.create({ data });
+  async findUserById(id: string): Promise<UserWithClinic | null> {
+    return prisma.user.findUnique({ where: { id }, include: { clinic: true } });
+  }
+
+  async createUser(data: CreatePatientUserData): Promise<UserWithClinic> {
+    return prisma.user.create({ data, include: { clinic: true } });
+  }
+
+  /** Vincula registros Patient existentes (mesmo CPF, ainda sem dono) à conta global. */
+  async linkPatientsByCpf(cpf: string, userId: string): Promise<void> {
+    await prisma.patient.updateMany({
+      where: { cpf, userId: null },
+      data: { userId },
+    });
   }
 
   async saveRefreshToken(data: { token: string; userId: string; expiresAt: Date }): Promise<RefreshToken> {

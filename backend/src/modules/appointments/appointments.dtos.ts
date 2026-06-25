@@ -22,6 +22,7 @@ export interface UpdateStatusDTO {
 }
 
 export interface ListAppointmentsFilterDTO {
+  clinicId: string;
   from?: Date;
   to?: Date;
   professionalId?: string;
@@ -30,6 +31,7 @@ export interface ListAppointmentsFilterDTO {
 }
 
 export interface AvailabilityCheckDTO {
+  clinicId: string;
   professionalId: string;
   roomId?: string | null;
   equipmentId?: string | null;

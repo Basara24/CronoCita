@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { CalendarDays, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { apiErrorMessage } from '@/lib/api';
+import { defaultRouteForRole } from '@/components/layout/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 const loginSchema = z.object({
   email: z.string().email('E-mail inválido'),
   password: z.string().min(1, 'Informe a senha'),
+  remember: z.boolean().optional(),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -33,7 +35,7 @@ export function Login() {
     setError(null);
     try {
       const user = await signIn(data.email, data.password);
-      navigate(user.role === 'ADMIN' ? '/' : '/agenda');
+      navigate(defaultRouteForRole(user.role));
     } catch (err) {
       setError(apiErrorMessage(err));
     }
@@ -65,6 +67,16 @@ export function Login() {
               )}
             </div>
 
+            <div className="flex items-center justify-between text-sm">
+              <label className="flex items-center gap-2 text-muted-foreground">
+                <input type="checkbox" className="h-4 w-4" {...register('remember')} />
+                Lembrar-me
+              </label>
+              <Link to="/recuperar-senha" className="font-medium text-primary hover:underline">
+                Esqueci minha senha
+              </Link>
+            </div>
+
             {error && (
               <p data-cy="login-error" className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">
                 {error}
@@ -78,16 +90,18 @@ export function Login() {
           </form>
 
           <div className="mt-4 text-center text-sm text-muted-foreground">
-            É paciente?{' '}
-            <Link to="/agendar" className="font-medium text-primary hover:underline">
-              Agende online sem login
+            Ainda não tem conta?{' '}
+            <Link to="/register" className="font-medium text-primary hover:underline">
+              Criar conta de paciente
             </Link>
           </div>
 
           <div className="mt-6 rounded-md bg-secondary p-3 text-xs text-secondary-foreground">
             <p className="font-semibold">Credenciais de demonstração (senha: 123456)</p>
-            <p>admin@cronocita.com · secretaria@cronocita.com</p>
-            <p>ana@cronocita.com · paciente@cronocita.com</p>
+            <p>super@cronocita.com (plataforma)</p>
+            <p>admin@viverbem.com (admin de clínica)</p>
+            <p>ana@viverbem.com (profissional)</p>
+            <p>joao@cliente.com (paciente)</p>
           </div>
         </CardContent>
       </Card>

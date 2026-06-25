@@ -35,6 +35,9 @@ services:
       NOTIFICATION_PROVIDER: whatsapp
     ports:
       - '3333:3333'
+    volumes:
+      # Persiste os arquivos enviados (avatares) entre reinicializações
+      - uploads_data:/app/uploads
     depends_on:
       mysql:
         condition: service_healthy
@@ -53,3 +56,4 @@ services:
 
 volumes:
   mysql_data:
+  uploads_data:

@@ -17,7 +17,7 @@ import type { Commission, CommissionSummary } from '@/types';
 
 export function Financial() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = user?.role === 'CLINIC_ADMIN';
 
   const { data: commissions = [] } = useQuery({
     queryKey: ['commissions'],

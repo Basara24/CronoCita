@@ -13,11 +13,11 @@ export class DashboardController {
 
   kpis = async (req: Request, res: Response): Promise<void> => {
     const { from, to } = resolvePeriod(req);
-    res.json(await this.service.getKpis(from, to));
+    res.json(await this.service.getKpis(req.clinicId as string, from, to));
   };
 
   charts = async (req: Request, res: Response): Promise<void> => {
     const { from, to } = resolvePeriod(req);
-    res.json(await this.service.getCharts(from, to));
+    res.json(await this.service.getCharts(req.clinicId as string, from, to));
   };
 }

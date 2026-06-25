@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useForm } from 'react-hook-form';
@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { CalendarDays, Check, ChevronLeft, Loader2 } from 'lucide-react';
 import { API_URL, apiErrorMessage } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { cn, formatCurrency, formatDateTime, formatTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +56,8 @@ function nextDays(count: number): Date[] {
 }
 
 export function PublicBooking() {
+  const { slug = '' } = useParams();
+  const { user } = useAuth();
   const [step, setStep] = useState<Step>('specialty');
   const [specialty, setSpecialty] = useState<string | null>(null);
   const [professional, setProfessional] = useState<PublicProfessional | null>(null);
@@ -67,52 +70,76 @@ export function PublicBooking() {
 
   const days = useMemo(() => nextDays(14), []);
 
+  const { data: clinic } = useQuery({
+    queryKey: ['public', 'clinic', slug],
+    queryFn: async () =>
+      (await axios.get<{ name: string }>(`${API_URL}/public/clinics/${slug}`)).data,
+    enabled: !!slug,
+  });
+
   const { data: specialties = [] } = useQuery({
-    queryKey: ['public', 'specialties'],
-    queryFn: async () => (await axios.get<string[]>(`${API_URL}/public/specialties`)).data,
+    queryKey: ['public', 'clinic-specialties', slug],
+    queryFn: async () =>
+      (await axios.get<PublicProfessional[]>(`${API_URL}/public/clinics/${slug}/professionals`)).data
+        .map((p) => p.specialty)
+        .filter((value, index, arr) => arr.indexOf(value) === index),
+    enabled: !!slug,
   });
 
   const { data: professionals = [] } = useQuery({
-    queryKey: ['public', 'professionals', specialty],
+    queryKey: ['public', 'clinic-professionals', slug, specialty],
     queryFn: async () =>
       (
-        await axios.get<PublicProfessional[]>(`${API_URL}/public/professionals`, {
+        await axios.get<PublicProfessional[]>(`${API_URL}/public/clinics/${slug}/professionals`, {
           params: { specialty },
         })
       ).data,
-    enabled: !!specialty,
+    enabled: !!slug && !!specialty,
   });
 
   const { data: services = [] } = useQuery({
-    queryKey: ['public', 'services'],
-    queryFn: async () => (await axios.get<PublicService[]>(`${API_URL}/public/services`)).data,
+    queryKey: ['public', 'clinic-services', slug],
+    queryFn: async () =>
+      (await axios.get<PublicService[]>(`${API_URL}/public/clinics/${slug}/services`)).data,
+    enabled: !!slug,
   });
 
   const dateISO = date ? date.toISOString().slice(0, 10) : null;
 
   const { data: slots = [], isFetching: loadingSlots } = useQuery({
-    queryKey: ['public', 'availability', professional?.id, service?.id, dateISO],
+    queryKey: ['public', 'availability', slug, professional?.id, service?.id, dateISO],
     queryFn: async () =>
       (
-        await axios.get<string[]>(`${API_URL}/public/availability`, {
+        await axios.get<string[]>(`${API_URL}/public/clinics/${slug}/availability`, {
           params: { professionalId: professional!.id, serviceId: service!.id, date: dateISO },
         })
       ).data,
-    enabled: !!professional && !!service && !!dateISO,
+    enabled: !!slug && !!professional && !!service && !!dateISO,
   });
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<PatientForm>({ resolver: zodResolver(patientSchema) });
+  } = useForm<PatientForm>({
+    resolver: zodResolver(patientSchema),
+    values:
+      user && user.role === 'PATIENT'
+        ? {
+            name: user.name,
+            cpf: user.cpf ?? '',
+            email: user.email,
+            phone: user.phone ?? '',
+          }
+        : undefined,
+  });
 
   async function onConfirm(patient: PatientForm) {
     if (!professional || !service || !slot) return;
     setError(null);
     setSubmitting(true);
     try {
-      const { data } = await axios.post(`${API_URL}/public/appointments`, {
+      const { data } = await axios.post(`${API_URL}/public/clinics/${slug}/appointments`, {
         professionalId: professional.id,
         serviceId: service.id,
         startsAt: slot,
@@ -144,14 +171,15 @@ export function PublicBooking() {
             </div>
             <p className="text-lg font-bold text-primary">CronoCita</p>
           </div>
-          <Link to="/login" className="text-sm font-medium text-primary hover:underline">
-            Área da clínica
+          <Link to={`/clinica/${slug}`} className="text-sm font-medium text-primary hover:underline">
+            Voltar à clínica
           </Link>
         </div>
       </header>
 
       <main className="container max-w-2xl py-8">
         <div className="mb-6 text-center">
+          {clinic && <p className="text-sm font-medium text-primary">{clinic.name}</p>}
           <h1 className="text-2xl font-bold">{STEP_TITLES[step]}</h1>
           {step !== 'done' && (
             <p className="text-sm text-muted-foreground">

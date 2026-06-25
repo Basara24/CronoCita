@@ -27,6 +27,7 @@ export class CommissionsRepository implements ICommissionsRepository {
   async findMany(filter: ListCommissionsFilterDTO): Promise<CommissionWithRelations[]> {
     return prisma.commission.findMany({
       where: {
+        clinicId: filter.clinicId,
         professionalId: filter.professionalId,
         createdAt: filter.from || filter.to ? { gte: filter.from, lte: filter.to } : undefined,
       },

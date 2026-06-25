@@ -8,10 +8,28 @@ datasource db {
 }
 
 enum Role {
-  ADMIN
+  SUPER_ADMIN
+  CLINIC_ADMIN
   SECRETARY
   PROFESSIONAL
   PATIENT
+}
+
+enum ClinicStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SubscriptionPlan {
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
 }
 
 enum ResourceStatus {
@@ -46,20 +64,96 @@ enum NotificationStatus {
   FAILED
 }
 
+enum NotificationType {
+  APPOINTMENT
+  REMINDER
+  CHAT
+  PROMOTION
+  SYSTEM
+}
+
+model Clinic {
+  id          String       @id @default(uuid())
+  name        String
+  slug        String       @unique
+  cnpj        String       @unique
+  email       String
+  phone       String
+  description String?      @db.Text
+  logoUrl     String?
+  address     String
+  city        String
+  state       String
+  zipCode     String
+  status      ClinicStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  specialties   ClinicSpecialty[]
+  subscription  Subscription?
+  users         User[]
+  professionals Professional[]
+  patients      Patient[]
+  rooms         Room[]
+  equipments    Equipment[]
+  services      Service[]
+  appointments  Appointment[]
+  commissions   Commission[]
+
+  @@index([city])
+  @@map("clinics")
+}
+
+model ClinicSpecialty {
+  clinicId  String
+  specialty String
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@id([clinicId, specialty])
+  @@index([specialty])
+  @@map("clinic_specialties")
+}
+
+model Subscription {
+  id        String             @id @default(uuid())
+  clinicId  String             @unique
+  plan      SubscriptionPlan   @default(BASIC)
+  status    SubscriptionStatus @default(ACTIVE)
+  price     Decimal            @db.Decimal(10, 2)
+  startsAt  DateTime           @default(now())
+  renewsAt  DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
 model User {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
+  cpf       String?  @unique
+  phone     String?
+  avatarUrl String?
   password  String
   role      Role     @default(SECRETARY)
+  clinicId  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  patient             Patient?
+  clinic              Clinic?              @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  patients            Patient[]
   professional        Professional?
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
+  notifications       UserNotification[]
+  sentMessages        Message[]            @relation("MessageSender")
+  receivedMessages    Message[]            @relation("MessageReceiver")
 
+  @@index([clinicId])
   @@map("users")
 }
 
@@ -92,45 +186,56 @@ model PasswordResetToken {
 
 model Patient {
   id        String   @id @default(uuid())
+  clinicId  String
   name      String
-  cpf       String   @unique
-  email     String   @unique
+  cpf       String
+  email     String
   phone     String
   birthDate DateTime
   address   String?
   city      String?
   state     String?
   zipCode   String?
-  userId    String?  @unique
+  userId    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  clinic       Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   appointments Appointment[]
 
+  @@unique([clinicId, cpf])
+  @@unique([clinicId, email])
+  @@index([clinicId])
+  @@index([userId])
   @@map("patients")
 }
 
 model Professional {
   id                   String   @id @default(uuid())
+  clinicId             String
   name                 String
   specialty            String
   commissionPercentage Decimal  @db.Decimal(5, 2)
   phone                String
-  email                String   @unique
+  email                String
   userId               String?  @unique
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
+  clinic       Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   appointments Appointment[]
   commissions  Commission[]
 
+  @@unique([clinicId, email])
+  @@index([clinicId])
   @@map("professionals")
 }
 
 model Room {
   id          String         @id @default(uuid())
+  clinicId    String
   name        String
   description String?
   capacity    Int            @default(1)
@@ -138,27 +243,33 @@ model Room {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
+  clinic       Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   appointments Appointment[]
 
+  @@index([clinicId])
   @@map("rooms")
 }
 
 model Equipment {
   id          String         @id @default(uuid())
+  clinicId    String
   name        String
   description String?
   status      ResourceStatus @default(ACTIVE)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
+  clinic       Clinic             @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   appointments Appointment[]
   services     ServiceEquipment[]
 
+  @@index([clinicId])
   @@map("equipments")
 }
 
 model Service {
   id              String   @id @default(uuid())
+  clinicId        String
   name            String
   durationMinutes Int
   price           Decimal  @db.Decimal(10, 2)
@@ -166,9 +277,11 @@ model Service {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  clinic       Clinic             @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   equipments   ServiceEquipment[]
   appointments Appointment[]
 
+  @@index([clinicId])
   @@map("services")
 }
 
@@ -185,6 +298,7 @@ model ServiceEquipment {
 
 model Appointment {
   id             String            @id @default(uuid())
+  clinicId       String
   patientId      String
   professionalId String
   serviceId      String
@@ -198,14 +312,16 @@ model Appointment {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
-  patient      Patient        @relation(fields: [patientId], references: [id])
-  professional Professional   @relation(fields: [professionalId], references: [id])
-  service      Service        @relation(fields: [serviceId], references: [id])
-  room         Room?          @relation(fields: [roomId], references: [id])
-  equipment    Equipment?     @relation(fields: [equipmentId], references: [id])
-  commission   Commission?
+  clinic        Clinic         @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patient       Patient        @relation(fields: [patientId], references: [id])
+  professional  Professional   @relation(fields: [professionalId], references: [id])
+  service       Service        @relation(fields: [serviceId], references: [id])
+  room          Room?          @relation(fields: [roomId], references: [id])
+  equipment     Equipment?     @relation(fields: [equipmentId], references: [id])
+  commission    Commission?
   notifications Notification[]
 
+  @@index([clinicId, startsAt])
   @@index([professionalId, startsAt])
   @@index([roomId, startsAt])
   @@index([equipmentId, startsAt])
@@ -215,6 +331,7 @@ model Appointment {
 
 model Commission {
   id                String   @id @default(uuid())
+  clinicId          String
   appointmentId     String   @unique
   professionalId    String
   totalValue        Decimal  @db.Decimal(10, 2)
@@ -223,9 +340,11 @@ model Commission {
   clinicValue       Decimal  @db.Decimal(10, 2)
   createdAt         DateTime @default(now())
 
+  clinic       Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   appointment  Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
   professional Professional @relation(fields: [professionalId], references: [id])
 
+  @@index([clinicId])
   @@index([professionalId])
   @@map("commissions")
 }
@@ -245,4 +364,37 @@ model Notification {
 
   @@index([appointmentId])
   @@map("notifications")
+}
+
+model UserNotification {
+  id            String           @id @default(uuid())
+  userId        String
+  title         String
+  message       String           @db.Text
+  type          NotificationType @default(SYSTEM)
+  isRead        Boolean          @default(false)
+  appointmentId String?
+  createdAt     DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("user_notifications")
+}
+
+model Message {
+  id            String    @id @default(uuid())
+  senderId      String
+  receiverId    String
+  appointmentId String?
+  content       String    @db.Text
+  createdAt     DateTime  @default(now())
+  readAt        DateTime?
+
+  sender   User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, senderId])
+  @@map("messages")
 }

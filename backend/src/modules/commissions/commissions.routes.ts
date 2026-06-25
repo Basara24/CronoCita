@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { ensureAuthenticated } from '../../shared/middleware/ensureAuthenticated';
 import { ensureRole } from '../../shared/middleware/ensureRole';
+import { ensureClinic } from '../../shared/middleware/ensureClinic';
 import { ProfessionalsRepository } from '../professionals/professionals.repository';
 import { CommissionsRepository } from './commissions.repository';
 import { CommissionsService } from './commissions.service';
@@ -14,7 +15,7 @@ const controller = new CommissionsController(
 
 export const commissionsRoutes = Router();
 
-commissionsRoutes.use(ensureAuthenticated, ensureRole('ADMIN', 'PROFESSIONAL'));
+commissionsRoutes.use(ensureAuthenticated, ensureClinic, ensureRole('CLINIC_ADMIN', 'PROFESSIONAL'));
 
 commissionsRoutes.get('/', asyncHandler(controller.list));
 commissionsRoutes.get('/summary', asyncHandler(controller.summary));

@@ -22,8 +22,8 @@ describe('Fluxo de Erro — conflito de agendamento', () => {
   }
 
   it('exibe erro ao tentar agendar profissional em horário já ocupado', () => {
-    cy.login('secretaria@cronocita.com', '123456');
-    cy.url().should('include', '/agenda');
+    cy.login('admin@viverbem.com', '123456');
+    cy.url().should('include', '/painel/agenda');
 
     // O seed já possui agendamento da Dra. Ana amanhã às 09:00
     createAppointment(1, '09:00');
@@ -34,8 +34,8 @@ describe('Fluxo de Erro — conflito de agendamento', () => {
   });
 
   it('exibe erro quando a sala/equipamento já está reservado', () => {
-    cy.login('secretaria@cronocita.com', '123456');
-    cy.url().should('include', '/agenda');
+    cy.login('admin@viverbem.com', '123456');
+    cy.url().should('include', '/painel/agenda');
 
     // Ocupa as salas ativas às 16:00 com profissionais diferentes
     createAppointment(1, '16:00');

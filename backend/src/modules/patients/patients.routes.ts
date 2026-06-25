@@ -3,6 +3,7 @@ import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { validateBody } from '../../shared/middleware/validate';
 import { ensureAuthenticated } from '../../shared/middleware/ensureAuthenticated';
 import { ensureRole } from '../../shared/middleware/ensureRole';
+import { ensureClinic } from '../../shared/middleware/ensureClinic';
 import { PatientsRepository } from './patients.repository';
 import { PatientsService } from './patients.service';
 import { PatientsController } from './patients.controller';
@@ -12,7 +13,7 @@ const controller = new PatientsController(new PatientsService(new PatientsReposi
 
 export const patientsRoutes = Router();
 
-patientsRoutes.use(ensureAuthenticated, ensureRole('ADMIN', 'SECRETARY'));
+patientsRoutes.use(ensureAuthenticated, ensureClinic, ensureRole('CLINIC_ADMIN', 'SECRETARY'));
 
 patientsRoutes.get('/', asyncHandler(controller.list));
 patientsRoutes.get('/:id', asyncHandler(controller.getById));

@@ -1,28 +1,29 @@
-import { Prisma, Room } from '@prisma/client';
+import { Room } from '@prisma/client';
 import { prisma } from '../../shared/database/prisma';
+import { CreateRoomDTO, UpdateRoomDTO } from './rooms.dtos';
 
 export interface IRoomsRepository {
-  findAll(): Promise<Room[]>;
-  findById(id: string): Promise<Room | null>;
-  create(data: Prisma.RoomCreateInput): Promise<Room>;
-  update(id: string, data: Prisma.RoomUpdateInput): Promise<Room>;
+  findAll(clinicId: string): Promise<Room[]>;
+  findById(clinicId: string, id: string): Promise<Room | null>;
+  create(clinicId: string, data: CreateRoomDTO): Promise<Room>;
+  update(id: string, data: UpdateRoomDTO): Promise<Room>;
   delete(id: string): Promise<void>;
 }
 
 export class RoomsRepository implements IRoomsRepository {
-  async findAll(): Promise<Room[]> {
-    return prisma.room.findMany({ orderBy: { name: 'asc' } });
+  async findAll(clinicId: string): Promise<Room[]> {
+    return prisma.room.findMany({ where: { clinicId }, orderBy: { name: 'asc' } });
   }
 
-  async findById(id: string): Promise<Room | null> {
-    return prisma.room.findUnique({ where: { id } });
+  async findById(clinicId: string, id: string): Promise<Room | null> {
+    return prisma.room.findFirst({ where: { id, clinicId } });
   }
 
-  async create(data: Prisma.RoomCreateInput): Promise<Room> {
-    return prisma.room.create({ data });
+  async create(clinicId: string, data: CreateRoomDTO): Promise<Room> {
+    return prisma.room.create({ data: { ...data, clinicId } });
   }
 
-  async update(id: string, data: Prisma.RoomUpdateInput): Promise<Room> {
+  async update(id: string, data: UpdateRoomDTO): Promise<Room> {
     return prisma.room.update({ where: { id }, data });
   }
 

@@ -6,6 +6,9 @@ export interface LoginDTO {
 export interface RegisterDTO {
   name: string;
   email: string;
+  cpf: string;
+  phone: string;
+  birthDate: string;
   password: string;
 }
 
@@ -30,5 +33,10 @@ export interface AuthResultDTO {
     name: string;
     email: string;
     role: string;
+    clinicId: string | null;
+    clinicSlug: string | null;
+    cpf: string | null;
+    phone: string | null;
+    avatarUrl: string | null;
   };
 }

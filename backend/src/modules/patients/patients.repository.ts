@@ -1,54 +1,74 @@
-import { Patient, Prisma } from '@prisma/client';
+import { Patient } from '@prisma/client';
 import { prisma } from '../../shared/database/prisma';
 
+type PatientWriteData = {
+  name: string;
+  cpf: string;
+  email: string;
+  phone: string;
+  birthDate: Date;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+};
+
 export interface IPatientsRepository {
-  findAll(search?: string): Promise<Patient[]>;
-  findById(id: string): Promise<Patient | null>;
-  findByCpf(cpf: string): Promise<Patient | null>;
-  findByEmail(email: string): Promise<Patient | null>;
+  findAll(clinicId: string, search?: string): Promise<Patient[]>;
+  findById(clinicId: string, id: string): Promise<Patient | null>;
+  findByCpf(clinicId: string, cpf: string): Promise<Patient | null>;
+  findByEmail(clinicId: string, email: string): Promise<Patient | null>;
   findByUserId(userId: string): Promise<Patient | null>;
-  create(data: Prisma.PatientUncheckedCreateInput): Promise<Patient>;
-  update(id: string, data: Prisma.PatientUncheckedUpdateInput): Promise<Patient>;
+  findAllByUserId(userId: string): Promise<Patient[]>;
+  create(clinicId: string, data: PatientWriteData): Promise<Patient>;
+  update(id: string, data: Partial<PatientWriteData>): Promise<Patient>;
   delete(id: string): Promise<void>;
 }
 
 export class PatientsRepository implements IPatientsRepository {
-  async findAll(search?: string): Promise<Patient[]> {
+  async findAll(clinicId: string, search?: string): Promise<Patient[]> {
     return prisma.patient.findMany({
-      where: search
-        ? {
-            OR: [
-              { name: { contains: search } },
-              { cpf: { contains: search } },
-              { email: { contains: search } },
-            ],
-          }
-        : undefined,
+      where: {
+        clinicId,
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search } },
+                { cpf: { contains: search } },
+                { email: { contains: search } },
+              ],
+            }
+          : {}),
+      },
       orderBy: { name: 'asc' },
     });
   }
 
-  async findById(id: string): Promise<Patient | null> {
-    return prisma.patient.findUnique({ where: { id } });
+  async findById(clinicId: string, id: string): Promise<Patient | null> {
+    return prisma.patient.findFirst({ where: { id, clinicId } });
   }
 
-  async findByCpf(cpf: string): Promise<Patient | null> {
-    return prisma.patient.findUnique({ where: { cpf } });
+  async findByCpf(clinicId: string, cpf: string): Promise<Patient | null> {
+    return prisma.patient.findFirst({ where: { clinicId, cpf } });
   }
 
-  async findByEmail(email: string): Promise<Patient | null> {
-    return prisma.patient.findUnique({ where: { email } });
+  async findByEmail(clinicId: string, email: string): Promise<Patient | null> {
+    return prisma.patient.findFirst({ where: { clinicId, email } });
   }
 
   async findByUserId(userId: string): Promise<Patient | null> {
-    return prisma.patient.findUnique({ where: { userId } });
+    return prisma.patient.findFirst({ where: { userId } });
   }
 
-  async create(data: Prisma.PatientUncheckedCreateInput): Promise<Patient> {
-    return prisma.patient.create({ data });
+  async findAllByUserId(userId: string): Promise<Patient[]> {
+    return prisma.patient.findMany({ where: { userId } });
   }
 
-  async update(id: string, data: Prisma.PatientUncheckedUpdateInput): Promise<Patient> {
+  async create(clinicId: string, data: PatientWriteData): Promise<Patient> {
+    return prisma.patient.create({ data: { ...data, clinicId } });
+  }
+
+  async update(id: string, data: Partial<PatientWriteData>): Promise<Patient> {
     return prisma.patient.update({ where: { id }, data });
   }
 

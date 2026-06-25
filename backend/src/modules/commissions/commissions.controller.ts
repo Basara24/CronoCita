@@ -12,6 +12,7 @@ export class CommissionsController {
   private async resolveFilter(req: Request) {
     const { from, to, professionalId } = req.query as Record<string, string | undefined>;
     const filter = {
+      clinicId: req.clinicId as string,
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
       professionalId,

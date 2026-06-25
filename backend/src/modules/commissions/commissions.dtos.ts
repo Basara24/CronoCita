@@ -1,4 +1,5 @@
 export interface CreateCommissionDTO {
+  clinicId: string;
   appointmentId: string;
   professionalId: string;
   totalValue: number;
@@ -6,6 +7,7 @@ export interface CreateCommissionDTO {
 }
 
 export interface ListCommissionsFilterDTO {
+  clinicId: string;
   professionalId?: string;
   from?: Date;
   to?: Date;

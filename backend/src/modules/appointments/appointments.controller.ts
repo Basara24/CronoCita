@@ -20,7 +20,9 @@ export class AppointmentsController {
       string | undefined
     >;
 
+    const clinicId = req.clinicId as string;
     const filter = {
+      clinicId,
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
       professionalId,
@@ -45,18 +47,18 @@ export class AppointmentsController {
   };
 
   getById = async (req: Request, res: Response): Promise<void> => {
-    res.json(await this.service.getById(req.params.id));
+    res.json(await this.service.getById(req.clinicId as string, req.params.id));
   };
 
   create = async (req: Request, res: Response): Promise<void> => {
-    res.status(201).json(await this.service.create(req.body));
+    res.status(201).json(await this.service.create(req.clinicId as string, req.body));
   };
 
   reschedule = async (req: Request, res: Response): Promise<void> => {
-    res.json(await this.service.reschedule(req.params.id, req.body));
+    res.json(await this.service.reschedule(req.clinicId as string, req.params.id, req.body));
   };
 
   updateStatus = async (req: Request, res: Response): Promise<void> => {
-    res.json(await this.service.updateStatus(req.params.id, req.body));
+    res.json(await this.service.updateStatus(req.clinicId as string, req.params.id, req.body));
   };
 }

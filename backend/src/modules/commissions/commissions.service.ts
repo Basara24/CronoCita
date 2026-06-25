@@ -21,6 +21,7 @@ export class CommissionsService {
     );
 
     return this.repository.create({
+      clinicId: data.clinicId,
       appointmentId: data.appointmentId,
       professionalId: data.professionalId,
       totalValue: data.totalValue,

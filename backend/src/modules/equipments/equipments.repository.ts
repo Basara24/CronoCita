@@ -1,28 +1,29 @@
-import { Equipment, Prisma } from '@prisma/client';
+import { Equipment } from '@prisma/client';
 import { prisma } from '../../shared/database/prisma';
+import { CreateEquipmentDTO, UpdateEquipmentDTO } from './equipments.dtos';
 
 export interface IEquipmentsRepository {
-  findAll(): Promise<Equipment[]>;
-  findById(id: string): Promise<Equipment | null>;
-  create(data: Prisma.EquipmentCreateInput): Promise<Equipment>;
-  update(id: string, data: Prisma.EquipmentUpdateInput): Promise<Equipment>;
+  findAll(clinicId: string): Promise<Equipment[]>;
+  findById(clinicId: string, id: string): Promise<Equipment | null>;
+  create(clinicId: string, data: CreateEquipmentDTO): Promise<Equipment>;
+  update(id: string, data: UpdateEquipmentDTO): Promise<Equipment>;
   delete(id: string): Promise<void>;
 }
 
 export class EquipmentsRepository implements IEquipmentsRepository {
-  async findAll(): Promise<Equipment[]> {
-    return prisma.equipment.findMany({ orderBy: { name: 'asc' } });
+  async findAll(clinicId: string): Promise<Equipment[]> {
+    return prisma.equipment.findMany({ where: { clinicId }, orderBy: { name: 'asc' } });
   }
 
-  async findById(id: string): Promise<Equipment | null> {
-    return prisma.equipment.findUnique({ where: { id } });
+  async findById(clinicId: string, id: string): Promise<Equipment | null> {
+    return prisma.equipment.findFirst({ where: { id, clinicId } });
   }
 
-  async create(data: Prisma.EquipmentCreateInput): Promise<Equipment> {
-    return prisma.equipment.create({ data });
+  async create(clinicId: string, data: CreateEquipmentDTO): Promise<Equipment> {
+    return prisma.equipment.create({ data: { ...data, clinicId } });
   }
 
-  async update(id: string, data: Prisma.EquipmentUpdateInput): Promise<Equipment> {
+  async update(id: string, data: UpdateEquipmentDTO): Promise<Equipment> {
     return prisma.equipment.update({ where: { id }, data });
   }
 

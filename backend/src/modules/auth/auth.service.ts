@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { AppError, UnauthorizedError } from '../../shared/errors/AppError';
 import { authConfig } from '../../shared/utils/authConfig';
-import { IAuthRepository } from './auth.repository';
+import { IAuthRepository, UserWithClinic } from './auth.repository';
 import {
   AuthResultDTO,
   ForgotPasswordDTO,
@@ -16,11 +16,20 @@ import {
 export class AuthService {
   constructor(private readonly repository: IAuthRepository) {}
 
-  private generateAccessToken(user: { id: string; role: string; name: string }): string {
-    return jwt.sign({ role: user.role, name: user.name }, authConfig.jwtSecret, {
-      subject: user.id,
-      expiresIn: authConfig.jwtExpiresIn as SignOptions['expiresIn'],
-    });
+  private generateAccessToken(user: {
+    id: string;
+    role: string;
+    name: string;
+    clinicId: string | null;
+  }): string {
+    return jwt.sign(
+      { role: user.role, name: user.name, clinicId: user.clinicId },
+      authConfig.jwtSecret,
+      {
+        subject: user.id,
+        expiresIn: authConfig.jwtExpiresIn as SignOptions['expiresIn'],
+      },
+    );
   }
 
   private async generateRefreshToken(userId: string): Promise<string> {
@@ -31,16 +40,22 @@ export class AuthService {
     return token;
   }
 
-  private async buildAuthResult(user: {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-  }): Promise<AuthResultDTO> {
+  private async buildAuthResult(user: UserWithClinic): Promise<AuthResultDTO> {
+    const clinicSlug = user.clinic?.slug ?? null;
     return {
       accessToken: this.generateAccessToken(user),
       refreshToken: await this.generateRefreshToken(user.id),
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        clinicId: user.clinicId,
+        clinicSlug,
+        cpf: user.cpf,
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+      },
     };
   }
 
@@ -55,17 +70,41 @@ export class AuthService {
       throw new UnauthorizedError('E-mail ou senha incorretos');
     }
 
+    // Best-effort: vincula prontuários por CPF que ainda não tenham dono (contas antigas)
+    if (user.role === 'PATIENT' && user.cpf) {
+      await this.repository.linkPatientsByCpf(user.cpf, user.id);
+    }
+
     return this.buildAuthResult(user);
   }
 
-  async register({ name, email, password }: RegisterDTO): Promise<AuthResultDTO> {
+  async register({ name, email, cpf, phone, birthDate, password }: RegisterDTO): Promise<AuthResultDTO> {
     const existing = await this.repository.findUserByEmail(email);
     if (existing) {
       throw new AppError('E-mail já cadastrado', 409);
     }
 
+    const existingCpf = await this.repository.findUserByCpf(cpf);
+    if (existingCpf) {
+      throw new AppError('CPF já cadastrado', 409);
+    }
+
     const hashed = await bcrypt.hash(password, 10);
-    const user = await this.repository.createUser({ name, email, password: hashed, role: 'PATIENT' });
+    const user = await this.repository.createUser({
+      name,
+      email,
+      cpf,
+      phone,
+      password: hashed,
+      role: 'PATIENT',
+    });
+
+    // Vincula registros Patient existentes (mesmo CPF) à nova conta global
+    await this.repository.linkPatientsByCpf(cpf, user.id);
+
+    // birthDate é capturado no cadastro; o registro Patient por clínica é criado no 1º agendamento
+    void birthDate;
+
     return this.buildAuthResult(user);
   }
 

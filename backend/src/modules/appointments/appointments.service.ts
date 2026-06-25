@@ -1,6 +1,7 @@
 import { AppError, ConflictError, NotFoundError } from '../../shared/errors/AppError';
 import { addMinutes } from '../../shared/utils/date';
 import { NotificationService } from '../../shared/notifications/NotificationService';
+import { userNotificationService } from '../notifications/userNotification.service';
 import { IServicesRepository } from '../services/services.repository';
 import { IPatientsRepository } from '../patients/patients.repository';
 import { IProfessionalsRepository } from '../professionals/professionals.repository';
@@ -40,20 +41,20 @@ export class AppointmentsService {
     return this.repository.findMany(filter);
   }
 
-  async getById(id: string): Promise<AppointmentWithRelations> {
-    const appointment = await this.repository.findById(id);
+  async getById(clinicId: string, id: string): Promise<AppointmentWithRelations> {
+    const appointment = await this.repository.findById(clinicId, id);
     if (!appointment) throw new NotFoundError('Agendamento não encontrado');
     return appointment;
   }
 
-  async create(data: CreateAppointmentDTO): Promise<AppointmentWithRelations> {
-    const service = await this.servicesRepository.findById(data.serviceId);
+  async create(clinicId: string, data: CreateAppointmentDTO): Promise<AppointmentWithRelations> {
+    const service = await this.servicesRepository.findById(clinicId, data.serviceId);
     if (!service) throw new NotFoundError('Serviço não encontrado');
 
-    const professional = await this.professionalsRepository.findById(data.professionalId);
+    const professional = await this.professionalsRepository.findById(clinicId, data.professionalId);
     if (!professional) throw new NotFoundError('Profissional não encontrado');
 
-    const patient = await this.patientsRepository.findById(data.patientId);
+    const patient = await this.patientsRepository.findById(clinicId, data.patientId);
     if (!patient) throw new NotFoundError('Paciente não encontrado');
 
     const startsAt = new Date(data.startsAt);
@@ -66,7 +67,7 @@ export class AppointmentsService {
     // Alocação automática de sala quando o serviço exige e nenhuma foi informada
     let roomId = data.roomId ?? null;
     if (service.requiresRoom && !roomId) {
-      const freeRoom = await this.repository.findFreeRoom(startsAt, endsAt);
+      const freeRoom = await this.repository.findFreeRoom(clinicId, startsAt, endsAt);
       if (!freeRoom) throw new ConflictError('Sala ou equipamento já reservado.');
       roomId = freeRoom.id;
     }
@@ -76,6 +77,7 @@ export class AppointmentsService {
     let equipmentId = data.equipmentId ?? null;
     if (requiredEquipmentIds.length > 0 && !equipmentId) {
       const freeEquipment = await this.repository.findFreeEquipment(
+        clinicId,
         requiredEquipmentIds,
         startsAt,
         endsAt,
@@ -85,6 +87,7 @@ export class AppointmentsService {
     }
 
     await this.availability.checkAvailability({
+      clinicId,
       professionalId: data.professionalId,
       roomId,
       equipmentId,
@@ -92,7 +95,8 @@ export class AppointmentsService {
       endsAt,
     });
 
-    const appointment = await this.repository.create({
+    const appointment = await this.repository.create(clinicId, {
+      clinicId,
       patientId: data.patientId,
       professionalId: data.professionalId,
       serviceId: data.serviceId,
@@ -113,11 +117,27 @@ export class AppointmentsService {
       })
       .catch((err) => console.error('Erro ao notificar:', err));
 
+    if (appointment.patient.userId) {
+      userNotificationService
+        .create({
+          userId: appointment.patient.userId,
+          title: 'Agendamento confirmado',
+          message: `📅 Sua consulta de ${appointment.service.name} foi agendada para ${appointment.startsAt.toLocaleString('pt-BR')}.`,
+          type: 'APPOINTMENT',
+          appointmentId: appointment.id,
+        })
+        .catch((err) => console.error('Erro ao notificar (in-app):', err));
+    }
+
     return appointment;
   }
 
-  async reschedule(id: string, data: RescheduleAppointmentDTO): Promise<AppointmentWithRelations> {
-    const appointment = await this.getById(id);
+  async reschedule(
+    clinicId: string,
+    id: string,
+    data: RescheduleAppointmentDTO,
+  ): Promise<AppointmentWithRelations> {
+    const appointment = await this.getById(clinicId, id);
 
     if (appointment.status === 'CANCELED' || appointment.status === 'FINISHED') {
       throw new AppError('Não é possível remarcar um agendamento cancelado ou finalizado');
@@ -129,6 +149,7 @@ export class AppointmentsService {
     const equipmentId = data.equipmentId ?? appointment.equipmentId;
 
     await this.availability.checkAvailability({
+      clinicId,
       professionalId: appointment.professionalId,
       roomId,
       equipmentId,
@@ -137,11 +158,29 @@ export class AppointmentsService {
       excludeAppointmentId: id,
     });
 
-    return this.repository.update(id, { startsAt, endsAt, roomId, equipmentId });
+    const updated = await this.repository.update(id, { startsAt, endsAt, roomId, equipmentId });
+
+    if (updated.patient.userId) {
+      userNotificationService
+        .create({
+          userId: updated.patient.userId,
+          title: 'Consulta remarcada',
+          message: `⚠️ Sua consulta de ${updated.service.name} foi remarcada para ${updated.startsAt.toLocaleString('pt-BR')}.`,
+          type: 'APPOINTMENT',
+          appointmentId: updated.id,
+        })
+        .catch((err) => console.error('Erro ao notificar (in-app):', err));
+    }
+
+    return updated;
   }
 
-  async updateStatus(id: string, data: UpdateStatusDTO): Promise<AppointmentWithRelations> {
-    const appointment = await this.getById(id);
+  async updateStatus(
+    clinicId: string,
+    id: string,
+    data: UpdateStatusDTO,
+  ): Promise<AppointmentWithRelations> {
+    const appointment = await this.getById(clinicId, id);
 
     if (data.status === 'CANCELED') {
       if (!canCancel(appointment.startsAt)) {
@@ -160,10 +199,23 @@ export class AppointmentsService {
           startsAt: appointment.startsAt,
         })
         .catch((err) => console.error('Erro ao notificar:', err));
+
+      if (appointment.patient.userId) {
+        userNotificationService
+          .create({
+            userId: appointment.patient.userId,
+            title: 'Consulta cancelada',
+            message: `❌ Sua consulta de ${appointment.service.name} foi cancelada.`,
+            type: 'APPOINTMENT',
+            appointmentId: appointment.id,
+          })
+          .catch((err) => console.error('Erro ao notificar (in-app):', err));
+      }
     }
 
     if (data.status === 'FINISHED') {
       await this.commissionsService.createForAppointment({
+        clinicId,
         appointmentId: appointment.id,
         professionalId: appointment.professionalId,
         totalValue: Number(appointment.service.price),
@@ -182,11 +234,12 @@ export class AppointmentsService {
    * em passos de 30min e mantém apenas horários sem conflito.
    */
   async getAvailableSlots(
+    clinicId: string,
     professionalId: string,
     serviceId: string,
     dateISO: string,
   ): Promise<string[]> {
-    const service = await this.servicesRepository.findById(serviceId);
+    const service = await this.servicesRepository.findById(clinicId, serviceId);
     if (!service) throw new NotFoundError('Serviço não encontrado');
 
     const day = new Date(`${dateISO}T00:00:00`);
@@ -198,6 +251,7 @@ export class AppointmentsService {
     dayEnd.setHours(WORK_END_HOUR, 0, 0, 0);
 
     const appointments = await this.repository.findMany({
+      clinicId,
       from: dayStart,
       to: dayEnd,
       professionalId,
@@ -222,13 +276,14 @@ export class AppointmentsService {
       if (professionalBusy) continue;
 
       if (service.requiresRoom) {
-        const freeRoom = await this.repository.findFreeRoom(slotStart, slotEnd);
+        const freeRoom = await this.repository.findFreeRoom(clinicId, slotStart, slotEnd);
         if (!freeRoom) continue;
       }
 
       const requiredEquipmentIds = service.equipments.map((e) => e.equipmentId);
       if (requiredEquipmentIds.length > 0) {
         const freeEquipment = await this.repository.findFreeEquipment(
+          clinicId,
           requiredEquipmentIds,
           slotStart,
           slotEnd,
@@ -242,14 +297,14 @@ export class AppointmentsService {
     return slots;
   }
 
-  /** Agendamento online sem login: localiza ou cadastra o paciente pelo CPF/e-mail. */
-  async publicBooking(data: PublicBookingDTO): Promise<AppointmentWithRelations> {
-    let patient = await this.patientsRepository.findByCpf(data.patient.cpf);
+  /** Agendamento online sem login: localiza ou cadastra o paciente pelo CPF/e-mail (por clínica). */
+  async publicBooking(clinicId: string, data: PublicBookingDTO): Promise<AppointmentWithRelations> {
+    let patient = await this.patientsRepository.findByCpf(clinicId, data.patient.cpf);
     if (!patient) {
-      patient = await this.patientsRepository.findByEmail(data.patient.email);
+      patient = await this.patientsRepository.findByEmail(clinicId, data.patient.email);
     }
     if (!patient) {
-      patient = await this.patientsRepository.create({
+      patient = await this.patientsRepository.create(clinicId, {
         name: data.patient.name,
         cpf: data.patient.cpf,
         email: data.patient.email,
@@ -258,7 +313,7 @@ export class AppointmentsService {
       });
     }
 
-    return this.create({
+    return this.create(clinicId, {
       patientId: patient.id,
       professionalId: data.professionalId,
       serviceId: data.serviceId,

@@ -74,7 +74,7 @@ export function Agenda() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canManage = user?.role === 'ADMIN' || user?.role === 'SECRETARY';
+  const canManage = user?.role === 'CLINIC_ADMIN' || user?.role === 'SECRETARY';
   const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart]);
 
   const { data: appointments = [] } = useQuery({

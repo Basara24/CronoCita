@@ -19,5 +19,6 @@ export interface UserResponseDTO {
   name: string;
   email: string;
   role: Role;
+  clinicId: string | null;
   createdAt: Date;
 }

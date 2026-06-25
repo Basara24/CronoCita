@@ -1,39 +1,41 @@
-import { Prisma, Professional } from '@prisma/client';
+import { Professional } from '@prisma/client';
 import { prisma } from '../../shared/database/prisma';
+import { CreateProfessionalDTO, UpdateProfessionalDTO } from './professionals.dtos';
 
 export interface IProfessionalsRepository {
-  findAll(specialty?: string): Promise<Professional[]>;
-  findById(id: string): Promise<Professional | null>;
-  findByEmail(email: string): Promise<Professional | null>;
+  findAll(clinicId: string, specialty?: string): Promise<Professional[]>;
+  findById(clinicId: string, id: string): Promise<Professional | null>;
+  findByEmail(clinicId: string, email: string): Promise<Professional | null>;
   findByUserId(userId: string): Promise<Professional | null>;
-  listSpecialties(): Promise<string[]>;
-  create(data: Prisma.ProfessionalUncheckedCreateInput): Promise<Professional>;
-  update(id: string, data: Prisma.ProfessionalUncheckedUpdateInput): Promise<Professional>;
+  listSpecialties(clinicId: string): Promise<string[]>;
+  create(clinicId: string, data: CreateProfessionalDTO): Promise<Professional>;
+  update(id: string, data: UpdateProfessionalDTO): Promise<Professional>;
   delete(id: string): Promise<void>;
 }
 
 export class ProfessionalsRepository implements IProfessionalsRepository {
-  async findAll(specialty?: string): Promise<Professional[]> {
+  async findAll(clinicId: string, specialty?: string): Promise<Professional[]> {
     return prisma.professional.findMany({
-      where: specialty ? { specialty } : undefined,
+      where: { clinicId, ...(specialty ? { specialty } : {}) },
       orderBy: { name: 'asc' },
     });
   }
 
-  async findById(id: string): Promise<Professional | null> {
-    return prisma.professional.findUnique({ where: { id } });
+  async findById(clinicId: string, id: string): Promise<Professional | null> {
+    return prisma.professional.findFirst({ where: { id, clinicId } });
   }
 
-  async findByEmail(email: string): Promise<Professional | null> {
-    return prisma.professional.findUnique({ where: { email } });
+  async findByEmail(clinicId: string, email: string): Promise<Professional | null> {
+    return prisma.professional.findFirst({ where: { clinicId, email } });
   }
 
   async findByUserId(userId: string): Promise<Professional | null> {
     return prisma.professional.findUnique({ where: { userId } });
   }
 
-  async listSpecialties(): Promise<string[]> {
+  async listSpecialties(clinicId: string): Promise<string[]> {
     const rows = await prisma.professional.findMany({
+      where: { clinicId },
       select: { specialty: true },
       distinct: ['specialty'],
       orderBy: { specialty: 'asc' },
@@ -41,11 +43,11 @@ export class ProfessionalsRepository implements IProfessionalsRepository {
     return rows.map((r) => r.specialty);
   }
 
-  async create(data: Prisma.ProfessionalUncheckedCreateInput): Promise<Professional> {
-    return prisma.professional.create({ data });
+  async create(clinicId: string, data: CreateProfessionalDTO): Promise<Professional> {
+    return prisma.professional.create({ data: { ...data, clinicId } });
   }
 
-  async update(id: string, data: Prisma.ProfessionalUncheckedUpdateInput): Promise<Professional> {
+  async update(id: string, data: UpdateProfessionalDTO): Promise<Professional> {
     return prisma.professional.update({ where: { id }, data });
   }
 

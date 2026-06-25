@@ -10,6 +10,7 @@ function toResponse(user: User): UserResponseDTO {
     name: user.name,
     email: user.email,
     role: user.role,
+    clinicId: user.clinicId,
     createdAt: user.createdAt,
   };
 }
@@ -17,28 +18,28 @@ function toResponse(user: User): UserResponseDTO {
 export class UsersService {
   constructor(private readonly repository: IUsersRepository) {}
 
-  async list(): Promise<UserResponseDTO[]> {
-    const users = await this.repository.findAll();
+  async list(clinicId: string): Promise<UserResponseDTO[]> {
+    const users = await this.repository.findAll(clinicId);
     return users.map(toResponse);
   }
 
-  async getById(id: string): Promise<UserResponseDTO> {
-    const user = await this.repository.findById(id);
+  async getById(clinicId: string, id: string): Promise<UserResponseDTO> {
+    const user = await this.repository.findById(clinicId, id);
     if (!user) throw new NotFoundError('Usuário não encontrado');
     return toResponse(user);
   }
 
-  async create(data: CreateUserDTO): Promise<UserResponseDTO> {
+  async create(clinicId: string, data: CreateUserDTO): Promise<UserResponseDTO> {
     const existing = await this.repository.findByEmail(data.email);
     if (existing) throw new AppError('E-mail já cadastrado', 409);
 
     const password = await bcrypt.hash(data.password, 10);
-    const user = await this.repository.create({ ...data, password });
+    const user = await this.repository.create(clinicId, { ...data, password });
     return toResponse(user);
   }
 
-  async update(id: string, data: UpdateUserDTO): Promise<UserResponseDTO> {
-    await this.getById(id);
+  async update(clinicId: string, id: string, data: UpdateUserDTO): Promise<UserResponseDTO> {
+    await this.getById(clinicId, id);
 
     if (data.email) {
       const existing = await this.repository.findByEmail(data.email);
@@ -54,8 +55,8 @@ export class UsersService {
     return toResponse(user);
   }
 
-  async delete(id: string): Promise<void> {
-    await this.getById(id);
+  async delete(clinicId: string, id: string): Promise<void> {
+    await this.getById(clinicId, id);
     await this.repository.delete(id);
   }
 }

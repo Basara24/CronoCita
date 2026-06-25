@@ -2,32 +2,34 @@ import { Appointment, Commission, Professional } from '@prisma/client';
 import { prisma } from '../../shared/database/prisma';
 
 export interface IDashboardRepository {
-  findAppointmentsInPeriod(from: Date, to: Date): Promise<Appointment[]>;
+  findAppointmentsInPeriod(clinicId: string, from: Date, to: Date): Promise<Appointment[]>;
   findCommissionsInPeriod(
+    clinicId: string,
     from: Date,
     to: Date,
   ): Promise<(Commission & { professional: Professional })[]>;
-  countActiveProfessionals(): Promise<number>;
+  countActiveProfessionals(clinicId: string): Promise<number>;
 }
 
 export class DashboardRepository implements IDashboardRepository {
-  async findAppointmentsInPeriod(from: Date, to: Date): Promise<Appointment[]> {
+  async findAppointmentsInPeriod(clinicId: string, from: Date, to: Date): Promise<Appointment[]> {
     return prisma.appointment.findMany({
-      where: { startsAt: { gte: from, lte: to } },
+      where: { clinicId, startsAt: { gte: from, lte: to } },
     });
   }
 
   async findCommissionsInPeriod(
+    clinicId: string,
     from: Date,
     to: Date,
   ): Promise<(Commission & { professional: Professional })[]> {
     return prisma.commission.findMany({
-      where: { createdAt: { gte: from, lte: to } },
+      where: { clinicId, createdAt: { gte: from, lte: to } },
       include: { professional: true },
     });
   }
 
-  async countActiveProfessionals(): Promise<number> {
-    return prisma.professional.count();
+  async countActiveProfessionals(clinicId: string): Promise<number> {
+    return prisma.professional.count({ where: { clinicId } });
   }
 }

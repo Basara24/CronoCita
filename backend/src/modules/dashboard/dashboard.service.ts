@@ -10,11 +10,11 @@ function round2(value: number): number {
 export class DashboardService {
   constructor(private readonly repository: IDashboardRepository) {}
 
-  async getKpis(from: Date, to: Date): Promise<DashboardKpisDTO> {
+  async getKpis(clinicId: string, from: Date, to: Date): Promise<DashboardKpisDTO> {
     const [appointments, commissions, professionalsCount] = await Promise.all([
-      this.repository.findAppointmentsInPeriod(from, to),
-      this.repository.findCommissionsInPeriod(from, to),
-      this.repository.countActiveProfessionals(),
+      this.repository.findAppointmentsInPeriod(clinicId, from, to),
+      this.repository.findCommissionsInPeriod(clinicId, from, to),
+      this.repository.countActiveProfessionals(clinicId),
     ]);
 
     const total = appointments.length;
@@ -65,10 +65,10 @@ export class DashboardService {
     };
   }
 
-  async getCharts(from: Date, to: Date): Promise<DashboardChartsDTO> {
+  async getCharts(clinicId: string, from: Date, to: Date): Promise<DashboardChartsDTO> {
     const [appointments, commissions] = await Promise.all([
-      this.repository.findAppointmentsInPeriod(from, to),
-      this.repository.findCommissionsInPeriod(from, to),
+      this.repository.findAppointmentsInPeriod(clinicId, from, to),
+      this.repository.findCommissionsInPeriod(clinicId, from, to),
     ]);
 
     const perDay = new Map<string, number>();

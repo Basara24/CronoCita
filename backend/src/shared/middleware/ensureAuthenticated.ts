@@ -7,13 +7,15 @@ export interface TokenPayload {
   sub: string;
   role: string;
   name: string;
+  clinicId?: string | null;
 }
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
-      user?: { id: string; role: string; name: string };
+      user?: { id: string; role: string; name: string; clinicId?: string | null };
+      clinicId?: string;
     }
   }
 }
@@ -29,7 +31,12 @@ export function ensureAuthenticated(req: Request, _res: Response, next: NextFunc
 
   try {
     const payload = jwt.verify(token, authConfig.jwtSecret) as unknown as TokenPayload;
-    req.user = { id: payload.sub, role: payload.role, name: payload.name };
+    req.user = {
+      id: payload.sub,
+      role: payload.role,
+      name: payload.name,
+      clinicId: payload.clinicId ?? null,
+    };
     next();
   } catch {
     throw new UnauthorizedError('Token inválido ou expirado');

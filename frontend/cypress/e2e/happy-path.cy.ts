@@ -12,10 +12,10 @@ describe('Fluxo Feliz — agendamento', () => {
   }
 
   it('realiza login, agenda uma consulta e vê o agendamento na agenda', () => {
-    cy.login('secretaria@cronocita.com', '123456');
+    cy.login('admin@viverbem.com', '123456');
 
-    // Após o login a secretária é direcionada para a agenda
-    cy.url().should('include', '/agenda');
+    // Após o login o admin da clínica é direcionado para a agenda
+    cy.url().should('include', '/painel/agenda');
 
     // Abre o formulário de novo agendamento
     cy.get('[data-cy=new-appointment]').click();

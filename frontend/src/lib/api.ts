@@ -2,12 +2,36 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3333/api';
 
+/** Origem do backend (sem o sufixo /api) — usada para arquivos estáticos e WebSocket. */
+export const SERVER_URL = API_URL.replace(/\/api\/?$/, '');
+
+/** Resolve uma URL de arquivo retornada pela API (ex.: /uploads/...) para URL absoluta. */
+export function resolveAssetUrl(url?: string | null): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${SERVER_URL}${url}`;
+}
+
 const STORAGE_KEY = 'cronocita.auth';
 
 export interface StoredAuth {
   accessToken: string;
   refreshToken: string;
-  user: { id: string; name: string; email: string; role: string };
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    clinicId?: string | null;
+    clinicSlug?: string | null;
+    cpf?: string | null;
+    phone?: string | null;
+    avatarUrl?: string | null;
+  };
+}
+
+export function getAccessToken(): string | null {
+  return getStoredAuth()?.accessToken ?? null;
 }
 
 export function getStoredAuth(): StoredAuth | null {

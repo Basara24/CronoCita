@@ -30,6 +30,7 @@ function makeChecker(conflicts: Appointment[]) {
 }
 
 const baseInput: AvailabilityCheckDTO = {
+  clinicId: 'clinic-1',
   professionalId: 'pro-1',
   roomId: 'room-1',
   equipmentId: 'eq-1',

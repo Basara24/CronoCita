@@ -6,27 +6,27 @@ import { CreateRoomDTO, UpdateRoomDTO } from './rooms.dtos';
 export class RoomsService {
   constructor(private readonly repository: IRoomsRepository) {}
 
-  async list(): Promise<Room[]> {
-    return this.repository.findAll();
+  async list(clinicId: string): Promise<Room[]> {
+    return this.repository.findAll(clinicId);
   }
 
-  async getById(id: string): Promise<Room> {
-    const room = await this.repository.findById(id);
+  async getById(clinicId: string, id: string): Promise<Room> {
+    const room = await this.repository.findById(clinicId, id);
     if (!room) throw new NotFoundError('Sala não encontrada');
     return room;
   }
 
-  async create(data: CreateRoomDTO): Promise<Room> {
-    return this.repository.create(data);
+  async create(clinicId: string, data: CreateRoomDTO): Promise<Room> {
+    return this.repository.create(clinicId, data);
   }
 
-  async update(id: string, data: UpdateRoomDTO): Promise<Room> {
-    await this.getById(id);
+  async update(clinicId: string, id: string, data: UpdateRoomDTO): Promise<Room> {
+    await this.getById(clinicId, id);
     return this.repository.update(id, data);
   }
 
-  async delete(id: string): Promise<void> {
-    await this.getById(id);
+  async delete(clinicId: string, id: string): Promise<void> {
+    await this.getById(clinicId, id);
     await this.repository.delete(id);
   }
 }

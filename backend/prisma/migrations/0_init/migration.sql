@@ -1,14 +1,65 @@
 -- CreateTable
+CREATE TABLE `clinics` (
+    `id` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `slug` VARCHAR(191) NOT NULL,
+    `cnpj` VARCHAR(191) NOT NULL,
+    `email` VARCHAR(191) NOT NULL,
+    `phone` VARCHAR(191) NOT NULL,
+    `description` TEXT NULL,
+    `logoUrl` VARCHAR(191) NULL,
+    `address` VARCHAR(191) NOT NULL,
+    `city` VARCHAR(191) NOT NULL,
+    `state` VARCHAR(191) NOT NULL,
+    `zipCode` VARCHAR(191) NOT NULL,
+    `status` ENUM('ACTIVE', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE',
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `clinics_slug_key`(`slug`),
+    UNIQUE INDEX `clinics_cnpj_key`(`cnpj`),
+    INDEX `clinics_city_idx`(`city`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `clinic_specialties` (
+    `clinicId` VARCHAR(191) NOT NULL,
+    `specialty` VARCHAR(191) NOT NULL,
+
+    INDEX `clinic_specialties_specialty_idx`(`specialty`),
+    PRIMARY KEY (`clinicId`, `specialty`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `subscriptions` (
+    `id` VARCHAR(191) NOT NULL,
+    `clinicId` VARCHAR(191) NOT NULL,
+    `plan` ENUM('BASIC', 'PRO', 'ENTERPRISE') NOT NULL DEFAULT 'BASIC',
+    `status` ENUM('ACTIVE', 'PAST_DUE', 'CANCELED') NOT NULL DEFAULT 'ACTIVE',
+    `price` DECIMAL(10, 2) NOT NULL,
+    `startsAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `renewsAt` DATETIME(3) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `subscriptions_clinicId_key`(`clinicId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `users` (
     `id` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `email` VARCHAR(191) NOT NULL,
     `password` VARCHAR(191) NOT NULL,
-    `role` ENUM('ADMIN', 'SECRETARY', 'PROFESSIONAL', 'PATIENT') NOT NULL DEFAULT 'SECRETARY',
+    `role` ENUM('SUPER_ADMIN', 'CLINIC_ADMIN', 'SECRETARY', 'PROFESSIONAL', 'PATIENT') NOT NULL DEFAULT 'SECRETARY',
+    `clinicId` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `users_email_key`(`email`),
+    INDEX `users_clinicId_idx`(`clinicId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -42,6 +93,7 @@ CREATE TABLE `password_reset_tokens` (
 -- CreateTable
 CREATE TABLE `patients` (
     `id` VARCHAR(191) NOT NULL,
+    `clinicId` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `cpf` VARCHAR(191) NOT NULL,
     `email` VARCHAR(191) NOT NULL,
@@ -55,15 +107,17 @@ CREATE TABLE `patients` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `patients_cpf_key`(`cpf`),
-    UNIQUE INDEX `patients_email_key`(`email`),
     UNIQUE INDEX `patients_userId_key`(`userId`),
+    INDEX `patients_clinicId_idx`(`clinicId`),
+    UNIQUE INDEX `patients_clinicId_cpf_key`(`clinicId`, `cpf`),
+    UNIQUE INDEX `patients_clinicId_email_key`(`clinicId`, `email`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `professionals` (
     `id` VARCHAR(191) NOT NULL,
+    `clinicId` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `specialty` VARCHAR(191) NOT NULL,
     `commissionPercentage` DECIMAL(5, 2) NOT NULL,
@@ -73,14 +127,16 @@ CREATE TABLE `professionals` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `professionals_email_key`(`email`),
     UNIQUE INDEX `professionals_userId_key`(`userId`),
+    INDEX `professionals_clinicId_idx`(`clinicId`),
+    UNIQUE INDEX `professionals_clinicId_email_key`(`clinicId`, `email`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `rooms` (
     `id` VARCHAR(191) NOT NULL,
+    `clinicId` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `description` VARCHAR(191) NULL,
     `capacity` INTEGER NOT NULL DEFAULT 1,
@@ -88,24 +144,28 @@ CREATE TABLE `rooms` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
+    INDEX `rooms_clinicId_idx`(`clinicId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `equipments` (
     `id` VARCHAR(191) NOT NULL,
+    `clinicId` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `description` VARCHAR(191) NULL,
     `status` ENUM('ACTIVE', 'INACTIVE', 'MAINTENANCE') NOT NULL DEFAULT 'ACTIVE',
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
+    INDEX `equipments_clinicId_idx`(`clinicId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `services` (
     `id` VARCHAR(191) NOT NULL,
+    `clinicId` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `durationMinutes` INTEGER NOT NULL,
     `price` DECIMAL(10, 2) NOT NULL,
@@ -113,6 +173,7 @@ CREATE TABLE `services` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
+    INDEX `services_clinicId_idx`(`clinicId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -127,6 +188,7 @@ CREATE TABLE `service_equipments` (
 -- CreateTable
 CREATE TABLE `appointments` (
     `id` VARCHAR(191) NOT NULL,
+    `clinicId` VARCHAR(191) NOT NULL,
     `patientId` VARCHAR(191) NOT NULL,
     `professionalId` VARCHAR(191) NOT NULL,
     `serviceId` VARCHAR(191) NOT NULL,
@@ -140,6 +202,7 @@ CREATE TABLE `appointments` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
+    INDEX `appointments_clinicId_startsAt_idx`(`clinicId`, `startsAt`),
     INDEX `appointments_professionalId_startsAt_idx`(`professionalId`, `startsAt`),
     INDEX `appointments_roomId_startsAt_idx`(`roomId`, `startsAt`),
     INDEX `appointments_equipmentId_startsAt_idx`(`equipmentId`, `startsAt`),
@@ -150,6 +213,7 @@ CREATE TABLE `appointments` (
 -- CreateTable
 CREATE TABLE `commissions` (
     `id` VARCHAR(191) NOT NULL,
+    `clinicId` VARCHAR(191) NOT NULL,
     `appointmentId` VARCHAR(191) NOT NULL,
     `professionalId` VARCHAR(191) NOT NULL,
     `totalValue` DECIMAL(10, 2) NOT NULL,
@@ -159,6 +223,7 @@ CREATE TABLE `commissions` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     UNIQUE INDEX `commissions_appointmentId_key`(`appointmentId`),
+    INDEX `commissions_clinicId_idx`(`clinicId`),
     INDEX `commissions_professionalId_idx`(`professionalId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -180,22 +245,49 @@ CREATE TABLE `notifications` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
+ALTER TABLE `clinic_specialties` ADD CONSTRAINT `clinic_specialties_clinicId_fkey` FOREIGN KEY (`clinicId`) REFERENCES `clinics`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `subscriptions` ADD CONSTRAINT `subscriptions_clinicId_fkey` FOREIGN KEY (`clinicId`) REFERENCES `clinics`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `users` ADD CONSTRAINT `users_clinicId_fkey` FOREIGN KEY (`clinicId`) REFERENCES `clinics`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `refresh_tokens` ADD CONSTRAINT `refresh_tokens_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `password_reset_tokens` ADD CONSTRAINT `password_reset_tokens_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `patients` ADD CONSTRAINT `patients_clinicId_fkey` FOREIGN KEY (`clinicId`) REFERENCES `clinics`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `patients` ADD CONSTRAINT `patients_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `professionals` ADD CONSTRAINT `professionals_clinicId_fkey` FOREIGN KEY (`clinicId`) REFERENCES `clinics`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `professionals` ADD CONSTRAINT `professionals_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `rooms` ADD CONSTRAINT `rooms_clinicId_fkey` FOREIGN KEY (`clinicId`) REFERENCES `clinics`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `equipments` ADD CONSTRAINT `equipments_clinicId_fkey` FOREIGN KEY (`clinicId`) REFERENCES `clinics`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `services` ADD CONSTRAINT `services_clinicId_fkey` FOREIGN KEY (`clinicId`) REFERENCES `clinics`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `service_equipments` ADD CONSTRAINT `service_equipments_serviceId_fkey` FOREIGN KEY (`serviceId`) REFERENCES `services`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `service_equipments` ADD CONSTRAINT `service_equipments_equipmentId_fkey` FOREIGN KEY (`equipmentId`) REFERENCES `equipments`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `appointments` ADD CONSTRAINT `appointments_clinicId_fkey` FOREIGN KEY (`clinicId`) REFERENCES `clinics`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `appointments` ADD CONSTRAINT `appointments_patientId_fkey` FOREIGN KEY (`patientId`) REFERENCES `patients`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -211,6 +303,9 @@ ALTER TABLE `appointments` ADD CONSTRAINT `appointments_roomId_fkey` FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE `appointments` ADD CONSTRAINT `appointments_equipmentId_fkey` FOREIGN KEY (`equipmentId`) REFERENCES `equipments`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `commissions` ADD CONSTRAINT `commissions_clinicId_fkey` FOREIGN KEY (`clinicId`) REFERENCES `clinics`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `commissions` ADD CONSTRAINT `commissions_appointmentId_fkey` FOREIGN KEY (`appointmentId`) REFERENCES `appointments`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

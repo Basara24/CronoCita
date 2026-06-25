@@ -25,22 +25,28 @@ const fullInclude = {
 
 export interface IAppointmentsRepository {
   findMany(filter: ListAppointmentsFilterDTO): Promise<AppointmentWithRelations[]>;
-  findById(id: string): Promise<AppointmentWithRelations | null>;
+  findById(clinicId: string, id: string): Promise<AppointmentWithRelations | null>;
   /**
    * Retorna agendamentos ativos (não cancelados) que se sobrepõem ao intervalo
-   * e disputam o mesmo profissional, sala ou equipamento.
+   * e disputam o mesmo profissional, sala ou equipamento (dentro da clínica).
    */
   findConflicts(input: AvailabilityCheckDTO): Promise<Appointment[]>;
-  create(data: Prisma.AppointmentUncheckedCreateInput): Promise<AppointmentWithRelations>;
+  create(clinicId: string, data: Prisma.AppointmentUncheckedCreateInput): Promise<AppointmentWithRelations>;
   update(id: string, data: Prisma.AppointmentUncheckedUpdateInput): Promise<AppointmentWithRelations>;
-  findFreeRoom(startsAt: Date, endsAt: Date): Promise<Room | null>;
-  findFreeEquipment(equipmentIds: string[], startsAt: Date, endsAt: Date): Promise<Equipment | null>;
+  findFreeRoom(clinicId: string, startsAt: Date, endsAt: Date): Promise<Room | null>;
+  findFreeEquipment(
+    clinicId: string,
+    equipmentIds: string[],
+    startsAt: Date,
+    endsAt: Date,
+  ): Promise<Equipment | null>;
 }
 
 export class AppointmentsRepository implements IAppointmentsRepository {
   async findMany(filter: ListAppointmentsFilterDTO): Promise<AppointmentWithRelations[]> {
     return prisma.appointment.findMany({
       where: {
+        clinicId: filter.clinicId,
         startsAt: filter.from || filter.to ? { gte: filter.from, lte: filter.to } : undefined,
         professionalId: filter.professionalId,
         patientId: filter.patientId,
@@ -51,8 +57,8 @@ export class AppointmentsRepository implements IAppointmentsRepository {
     });
   }
 
-  async findById(id: string): Promise<AppointmentWithRelations | null> {
-    return prisma.appointment.findUnique({ where: { id }, include: fullInclude });
+  async findById(clinicId: string, id: string): Promise<AppointmentWithRelations | null> {
+    return prisma.appointment.findFirst({ where: { id, clinicId }, include: fullInclude });
   }
 
   async findConflicts(input: AvailabilityCheckDTO): Promise<Appointment[]> {
@@ -64,6 +70,7 @@ export class AppointmentsRepository implements IAppointmentsRepository {
 
     return prisma.appointment.findMany({
       where: {
+        clinicId: input.clinicId,
         id: input.excludeAppointmentId ? { not: input.excludeAppointmentId } : undefined,
         status: { not: 'CANCELED' },
         startsAt: { lt: input.endsAt },
@@ -73,8 +80,11 @@ export class AppointmentsRepository implements IAppointmentsRepository {
     });
   }
 
-  async create(data: Prisma.AppointmentUncheckedCreateInput): Promise<AppointmentWithRelations> {
-    return prisma.appointment.create({ data, include: fullInclude });
+  async create(
+    clinicId: string,
+    data: Prisma.AppointmentUncheckedCreateInput,
+  ): Promise<AppointmentWithRelations> {
+    return prisma.appointment.create({ data: { ...data, clinicId }, include: fullInclude });
   }
 
   async update(
@@ -84,9 +94,10 @@ export class AppointmentsRepository implements IAppointmentsRepository {
     return prisma.appointment.update({ where: { id }, data, include: fullInclude });
   }
 
-  async findFreeRoom(startsAt: Date, endsAt: Date): Promise<Room | null> {
+  async findFreeRoom(clinicId: string, startsAt: Date, endsAt: Date): Promise<Room | null> {
     return prisma.room.findFirst({
       where: {
+        clinicId,
         status: 'ACTIVE',
         appointments: {
           none: {
@@ -101,6 +112,7 @@ export class AppointmentsRepository implements IAppointmentsRepository {
   }
 
   async findFreeEquipment(
+    clinicId: string,
     equipmentIds: string[],
     startsAt: Date,
     endsAt: Date,
@@ -108,6 +120,7 @@ export class AppointmentsRepository implements IAppointmentsRepository {
     if (equipmentIds.length === 0) return null;
     return prisma.equipment.findFirst({
       where: {
+        clinicId,
         id: { in: equipmentIds },
         status: 'ACTIVE',
         appointments: {
