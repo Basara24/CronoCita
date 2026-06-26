@@ -8,6 +8,7 @@ import { AppError } from '../errors/AppError';
 export const UPLOAD_ROOT = path.resolve(process.cwd(), 'uploads');
 
 const IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const CLINIC_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp'];
 const ATTACHMENT_MIME = [...IMAGE_MIME, 'application/pdf'];
 
 function ensureDir(sub: string): string {
@@ -38,6 +39,7 @@ function imageFilter(allowed: string[], label: string): multer.Options['fileFilt
 }
 
 const IMAGE_ERROR = 'Formato de imagem inválido (use JPG, PNG, WEBP ou GIF)';
+const CLINIC_IMAGE_ERROR = 'Formato de imagem inválido (use JPG, PNG, JPEG ou WEBP)';
 const ATTACHMENT_ERROR = 'Formato inválido (use JPG, PNG, WEBP, GIF ou PDF)';
 
 export const avatarUpload = multer({
@@ -49,7 +51,7 @@ export const avatarUpload = multer({
 export const clinicUpload = multer({
   storage: makeStorage('clinic'),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-  fileFilter: imageFilter(IMAGE_MIME, IMAGE_ERROR),
+  fileFilter: imageFilter(CLINIC_IMAGE_MIME, CLINIC_IMAGE_ERROR),
 });
 
 export const serviceUpload = multer({

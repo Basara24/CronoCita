@@ -19,6 +19,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton, SkeletonCards } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { ClinicLogo } from '@/components/ClinicLogo';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
@@ -277,13 +278,7 @@ function PublicClinicCard({ clinic }: { clinic: PublicClinicSummary }) {
     <Card data-cy="clinic-card" className="flex flex-col">
       <CardContent className="flex flex-1 flex-col gap-3 p-5">
         <div className="flex items-center gap-3">
-          {clinic.logoUrl ? (
-            <img src={clinic.logoUrl} alt={clinic.name} className="h-12 w-12 rounded-lg object-cover" />
-          ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Stethoscope className="h-6 w-6" />
-            </div>
-          )}
+          <ClinicLogo logoUrl={clinic.logoUrl} name={clinic.name} size="md" />
           <div>
             <p className="font-semibold leading-tight">{clinic.name}</p>
             <p className="flex items-center gap-1 text-xs text-muted-foreground">

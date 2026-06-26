@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   CalendarDays,
   ClipboardList,
@@ -13,9 +14,12 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { ClinicLogo } from '@/components/ClinicLogo';
+import type { ProfessionalProfile } from '@/types';
 
 const NAV = [
   { to: '/profissional', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -31,6 +35,11 @@ export function ProfessionalLayout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const { data: profile } = useQuery({
+    queryKey: ['professional', 'profile'],
+    queryFn: async () => (await api.get<ProfessionalProfile>('/professional/profile')).data,
+  });
+
   if (!user) return null;
 
   function handleSignOut() {
@@ -42,11 +51,17 @@ export function ProfessionalLayout() {
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center justify-between gap-2 border-b px-5">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Stethoscope className="h-5 w-5" />
-          </div>
+          {profile?.clinic ? (
+            <ClinicLogo logoUrl={profile.clinic.logoUrl} name={profile.clinic.name} size="sm" />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Stethoscope className="h-5 w-5" />
+            </div>
+          )}
           <div>
-            <p className="text-base font-bold leading-none text-primary">CronoCita</p>
+            <p className="text-base font-bold leading-none text-primary">
+              {profile?.clinic?.name ?? 'CronoCita'}
+            </p>
             <p className="text-[11px] text-muted-foreground">Portal do Profissional</p>
           </div>
         </div>

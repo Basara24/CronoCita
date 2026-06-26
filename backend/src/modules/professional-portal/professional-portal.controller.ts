@@ -90,6 +90,11 @@ export class ProfessionalPortalController {
   updateProfile = async (req: Request, res: Response): Promise<void> => {
     res.json(await professionalPortalService.updateProfile(req.user!.id, req.body));
   };
+
+  listMessagingContacts = async (req: Request, res: Response): Promise<void> => {
+    const { q } = req.query as Record<string, string | undefined>;
+    res.json(await professionalPortalService.listMessagingContacts(req.user!.id, q));
+  };
 }
 
 export const professionalPortalController = new ProfessionalPortalController();

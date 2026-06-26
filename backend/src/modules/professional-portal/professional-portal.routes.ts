@@ -69,3 +69,8 @@ professionalPortalRoutes.put(
   validateBody(updateProfileSchema),
   asyncHandler(professionalPortalController.updateProfile),
 );
+
+professionalPortalRoutes.get(
+  '/messaging/contacts',
+  asyncHandler(professionalPortalController.listMessagingContacts),
+);

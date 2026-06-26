@@ -60,9 +60,16 @@ export class MessagesService {
   }
 
   /** Histórico entre o usuário e a contraparte; marca como lidas as recebidas. */
-  async getConversation(userId: string, withUserId: string) {
+  async getConversation(userId: string, withUserId: string, viewerRole?: string) {
     const other = await prisma.user.findUnique({ where: { id: withUserId }, select: userSelect });
-    if (!other) throw new NotFoundError('Usuário não encontrado');
+    if (!other) throw new NotFoundError('Paciente não encontrado');
+
+    if (viewerRole === 'PROFESSIONAL' && other.role === 'PATIENT') {
+      const linked = await professionalPortalService.hasPatientLink(userId, withUserId);
+      if (!linked) {
+        throw new ForbiddenError('Paciente não encontrado ou sem vínculo com sua agenda.');
+      }
+    }
 
     const messages = await prisma.message.findMany({
       where: {
@@ -87,11 +94,11 @@ export class MessagesService {
     const receiver = await prisma.user.findUnique({ where: { id: receiverId }, select: userSelect });
     if (!receiver) throw new NotFoundError('Destinatário não encontrado');
 
-    // Restrição: profissional só conversa com pacientes que já atendeu.
+    // Restrição: profissional só conversa com pacientes vinculados à sua agenda.
     if (senderRole === 'PROFESSIONAL' && receiver.role === 'PATIENT') {
-      const attended = await professionalPortalService.hasAttended(senderId, receiverId);
-      if (!attended) {
-        throw new ForbiddenError('Você só pode enviar mensagens a pacientes já atendidos.');
+      const linked = await professionalPortalService.hasPatientLink(senderId, receiverId);
+      if (!linked) {
+        throw new ForbiddenError('Paciente não encontrado ou sem vínculo com sua agenda.');
       }
     }
 

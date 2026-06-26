@@ -318,6 +318,10 @@ export class ProfessionalPortalService {
       where: { id: userId },
       select: { id: true, name: true, email: true, avatarUrl: true },
     });
+    const clinic = await prisma.clinic.findUnique({
+      where: { id: professional.clinicId },
+      select: { name: true, logoUrl: true, coverImageUrl: true },
+    });
     return {
       id: professional.id,
       name: professional.name,
@@ -327,6 +331,7 @@ export class ProfessionalPortalService {
       commissionPercentage: professional.commissionPercentage,
       clinicId: professional.clinicId,
       avatarUrl: user?.avatarUrl ?? null,
+      clinic: clinic ?? { name: 'Clínica', logoUrl: null, coverImageUrl: null },
     };
   }
 
@@ -345,16 +350,96 @@ export class ProfessionalPortalService {
     return this.getProfile(userId);
   }
 
-  /** Indica se o paciente (por userId) já foi atendido por este profissional. */
-  async hasAttended(professionalUserId: string, patientUserId: string): Promise<boolean> {
+  /** Indica se o paciente (por userId) possui vínculo elegível para mensagens. */
+  async hasPatientLink(professionalUserId: string, patientUserId: string): Promise<boolean> {
     const professional = await this.resolve(professionalUserId);
     const count = await prisma.appointment.count({
       where: {
         professionalId: professional.id,
+        status: { not: 'CANCELED' },
         patient: { userId: patientUserId },
       },
     });
     return count > 0;
+  }
+
+  /** @deprecated Use hasPatientLink */
+  async hasAttended(professionalUserId: string, patientUserId: string): Promise<boolean> {
+    return this.hasPatientLink(professionalUserId, patientUserId);
+  }
+
+  /** Pacientes elegíveis para iniciar conversa (com conta de usuário). */
+  async listMessagingContacts(userId: string, search?: string) {
+    const professional = await this.resolve(userId);
+    const now = new Date();
+
+    const appointments = await prisma.appointment.findMany({
+      where: {
+        professionalId: professional.id,
+        status: { not: 'CANCELED' },
+        patient: { userId: { not: null } },
+      },
+      select: {
+        startsAt: true,
+        status: true,
+        patient: {
+          select: {
+            userId: true,
+            name: true,
+            user: { select: { id: true, name: true, avatarUrl: true } },
+          },
+        },
+      },
+      orderBy: { startsAt: 'asc' },
+    });
+
+    const byUser = new Map<
+      string,
+      {
+        userId: string;
+        name: string;
+        avatarUrl: string | null;
+        nextAppointment: Date | null;
+        lastAttendance: Date | null;
+      }
+    >();
+
+    for (const appt of appointments) {
+      const uid = appt.patient.userId!;
+      const existing = byUser.get(uid) ?? {
+        userId: uid,
+        name: appt.patient.user?.name ?? appt.patient.name,
+        avatarUrl: appt.patient.user?.avatarUrl ?? null,
+        nextAppointment: null,
+        lastAttendance: null,
+      };
+
+      if (
+        (appt.status === 'SCHEDULED' || appt.status === 'CONFIRMED') &&
+        appt.startsAt >= now &&
+        (!existing.nextAppointment || appt.startsAt < existing.nextAppointment)
+      ) {
+        existing.nextAppointment = appt.startsAt;
+      }
+
+      if (
+        appt.status === 'FINISHED' &&
+        (!existing.lastAttendance || appt.startsAt > existing.lastAttendance)
+      ) {
+        existing.lastAttendance = appt.startsAt;
+      }
+
+      byUser.set(uid, existing);
+    }
+
+    let contacts = Array.from(byUser.values());
+
+    if (search?.trim()) {
+      const q = search.trim().toLowerCase();
+      contacts = contacts.filter((c) => c.name.toLowerCase().includes(q));
+    }
+
+    return contacts.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }
 }
 

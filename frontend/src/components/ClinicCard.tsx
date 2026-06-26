@@ -3,6 +3,7 @@ import { MapPin, Star } from 'lucide-react';
 import { resolveAssetUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
+import { ClinicLogo } from '@/components/ClinicLogo';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import type { FavoriteClinic, PublicClinicSummary } from '@/types';
 
@@ -31,13 +32,12 @@ export function ClinicCard({ clinic }: { clinic: ClinicLike }) {
 
       <div className="space-y-2 p-4">
         <div className="flex items-start gap-3">
-          {clinic.logoUrl && (
-            <img
-              src={resolveAssetUrl(clinic.logoUrl)}
-              alt={clinic.name}
-              className="-mt-8 h-12 w-12 rounded-lg border-2 border-card bg-card object-cover"
-            />
-          )}
+          <ClinicLogo
+            logoUrl={clinic.logoUrl}
+            name={clinic.name}
+            size="md"
+            className="-mt-8 h-12 w-12 border-2 border-card bg-card"
+          />
           <div className="min-w-0 flex-1">
             <h3 className="truncate font-semibold">{clinic.name}</h3>
             <p className="flex items-center gap-1 text-xs text-muted-foreground">

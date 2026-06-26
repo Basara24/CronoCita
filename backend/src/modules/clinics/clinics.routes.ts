@@ -41,6 +41,34 @@ clinicsRoutes.post(
   clinicUpload.single('image'),
   asyncHandler(clinicsSelfController.uploadImage),
 );
+clinicsRoutes.post(
+  '/me/upload-logo',
+  ensureAuthenticated,
+  ensureRole('CLINIC_ADMIN'),
+  clinicUpload.single('image'),
+  asyncHandler(clinicsSelfController.uploadLogo),
+);
+clinicsRoutes.post(
+  '/me/upload-cover',
+  ensureAuthenticated,
+  ensureRole('CLINIC_ADMIN'),
+  clinicUpload.single('image'),
+  asyncHandler(clinicsSelfController.uploadCover),
+);
+clinicsRoutes.post(
+  '/upload-logo',
+  ensureAuthenticated,
+  ensureRole('CLINIC_ADMIN'),
+  clinicUpload.single('image'),
+  asyncHandler(clinicsSelfController.uploadLogo),
+);
+clinicsRoutes.post(
+  '/upload-cover',
+  ensureAuthenticated,
+  ensureRole('CLINIC_ADMIN'),
+  clinicUpload.single('image'),
+  asyncHandler(clinicsSelfController.uploadCover),
+);
 clinicsRoutes.get(
   '/me/photos',
   ensureAuthenticated,

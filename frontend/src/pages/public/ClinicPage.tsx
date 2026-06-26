@@ -23,6 +23,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { ClinicLogo } from '@/components/ClinicLogo';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import type { PublicClinicDetail } from '@/types';
 
@@ -80,17 +81,12 @@ export function ClinicPage() {
             </div>
 
             <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-end">
-              {clinic.logoUrl ? (
-                <img
-                  src={resolveAssetUrl(clinic.logoUrl)}
-                  alt={clinic.name}
-                  className="-mt-16 h-24 w-24 rounded-2xl border-4 border-card bg-card object-cover"
-                />
-              ) : (
-                <div className="-mt-16 flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-card bg-primary/10 text-primary">
-                  <Stethoscope className="h-10 w-10" />
-                </div>
-              )}
+              <ClinicLogo
+                logoUrl={clinic.logoUrl}
+                name={clinic.name}
+                size="lg"
+                className="-mt-16 h-24 w-24 rounded-2xl border-4 border-card bg-card"
+              />
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-2xl font-bold">{clinic.name}</h1>

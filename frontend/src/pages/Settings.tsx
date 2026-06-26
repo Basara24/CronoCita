@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { applyMask } from '@/lib/masks';
 import { digitsOnly } from '@/lib/validators/zodBr';
 import { useToast } from '@/components/ui/toast';
+import { ClinicLogo } from '@/components/ClinicLogo';
 import type { ClinicPhotoCategory, ClinicSelf } from '@/types';
 
 type Tab = 'identity' | 'photos' | 'location';
@@ -83,6 +84,7 @@ export function ClinicSettingsPage() {
 type ToastApi = ReturnType<typeof useToast>;
 
 function IdentityTab({ clinic, onSaved, toast }: { clinic: ClinicSelf; onSaved: () => void; toast: ToastApi }) {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState({
     name: clinic.name,
     description: clinic.description ?? '',
@@ -104,15 +106,36 @@ function IdentityTab({ clinic, onSaved, toast }: { clinic: ClinicSelf; onSaved: 
     onError: (e) => toast.error('Erro ao salvar', apiErrorMessage(e)),
   });
 
-  async function upload(file: File, field: 'logoUrl' | 'coverImageUrl') {
+  function invalidatePublicClinics() {
+    queryClient.invalidateQueries({ queryKey: ['clinics', 'me'] });
+    queryClient.invalidateQueries({ queryKey: ['public', 'clinics'] });
+    queryClient.invalidateQueries({ queryKey: ['public', 'clinics', 'featured'] });
+    onSaved();
+  }
+
+  async function uploadLogo(file: File) {
     const fd = new FormData();
     fd.append('image', file);
     try {
-      const { data } = await api.post<{ url: string }>('/clinics/me/upload', fd);
-      setForm((f) => ({ ...f, [field]: data.url }));
-      toast.success('Imagem enviada');
+      const { data } = await api.post<ClinicSelf>('/clinics/me/upload-logo', fd);
+      setForm((f) => ({ ...f, logoUrl: data.logoUrl ?? '' }));
+      invalidatePublicClinics();
+      toast.success('Logo enviada com sucesso.');
     } catch (e) {
-      toast.error('Falha no upload', apiErrorMessage(e));
+      toast.error('Erro ao enviar imagem.', apiErrorMessage(e));
+    }
+  }
+
+  async function uploadCover(file: File) {
+    const fd = new FormData();
+    fd.append('image', file);
+    try {
+      const { data } = await api.post<ClinicSelf>('/clinics/me/upload-cover', fd);
+      setForm((f) => ({ ...f, coverImageUrl: data.coverImageUrl ?? '' }));
+      invalidatePublicClinics();
+      toast.success('Upload concluído.');
+    } catch (e) {
+      toast.error('Erro ao enviar imagem.', apiErrorMessage(e));
     }
   }
 
@@ -121,17 +144,33 @@ function IdentityTab({ clinic, onSaved, toast }: { clinic: ClinicSelf; onSaved: 
       <CardContent className="grid gap-4 p-5 sm:grid-cols-2">
         <div className="sm:col-span-2 grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-xs text-muted-foreground">Logo</label>
+            <label className="text-xs text-muted-foreground">Logo da Clínica</label>
             <div className="mt-1 flex items-center gap-3">
-              {form.logoUrl && <img src={resolveAssetUrl(form.logoUrl)} alt="logo" className="h-14 w-14 rounded-lg object-cover" />}
-              <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0], 'logoUrl')} className="text-sm" />
+              <ClinicLogo logoUrl={form.logoUrl} name={form.name} size="md" />
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0])}
+                className="text-sm"
+              />
             </div>
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Imagem de capa</label>
+            <label className="text-xs text-muted-foreground">Imagem de Capa</label>
             <div className="mt-1 flex items-center gap-3">
-              {form.coverImageUrl && <img src={resolveAssetUrl(form.coverImageUrl)} alt="capa" className="h-14 w-24 rounded-lg object-cover" />}
-              <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0], 'coverImageUrl')} className="text-sm" />
+              {form.coverImageUrl ? (
+                <img src={resolveAssetUrl(form.coverImageUrl)} alt="capa" className="h-14 w-24 rounded-lg object-cover" />
+              ) : (
+                <div className="flex h-14 w-24 items-center justify-center rounded-lg bg-secondary text-xs text-muted-foreground">
+                  Sem capa
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={(e) => e.target.files?.[0] && uploadCover(e.target.files[0])}
+                className="text-sm"
+              />
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   BarChart3,
   Box,
@@ -17,10 +18,12 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import type { Role } from '@/types';
+import { ClinicLogo } from '@/components/ClinicLogo';
+import type { ClinicSelf, Role } from '@/types';
 
 interface NavItem {
   to: string;
@@ -56,6 +59,12 @@ export function AppLayout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const { data: clinic } = useQuery({
+    queryKey: ['clinics', 'me'],
+    queryFn: async () => (await api.get<ClinicSelf>('/clinics/me')).data,
+    enabled: user?.role === 'CLINIC_ADMIN',
+  });
+
   if (!user) return null;
 
   const items = NAV_ITEMS.filter((item) => item.roles.includes(user.role));
@@ -69,11 +78,17 @@ export function AppLayout() {
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center justify-between gap-2 border-b px-5">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <CalendarDays className="h-5 w-5" />
-          </div>
+          {user.role === 'CLINIC_ADMIN' && clinic ? (
+            <ClinicLogo logoUrl={clinic.logoUrl} name={clinic.name} size="sm" />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <CalendarDays className="h-5 w-5" />
+            </div>
+          )}
           <div>
-            <p className="text-base font-bold leading-none text-primary">CronoCita</p>
+            <p className="text-base font-bold leading-none text-primary">
+              {clinic?.name ?? 'CronoCita'}
+            </p>
             <p className="text-[11px] text-muted-foreground">Gestão de clínicas</p>
           </div>
         </div>

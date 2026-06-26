@@ -87,6 +87,14 @@ export class ClinicsSelfService {
     if (!photo) throw new NotFoundError('Foto não encontrada');
     await prisma.clinicPhoto.delete({ where: { id: photoId } });
   }
+
+  async uploadLogo(clinicId: string | null | undefined, url: string) {
+    return this.update(clinicId, { logoUrl: url });
+  }
+
+  async uploadCover(clinicId: string | null | undefined, url: string) {
+    return this.update(clinicId, { coverImageUrl: url });
+  }
 }
 
 export const clinicsSelfService = new ClinicsSelfService();

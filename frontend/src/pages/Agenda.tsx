@@ -3,10 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ChevronLeft, ChevronRight, Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { api, apiErrorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { cn, formatDateTime, formatTime } from '@/lib/utils';
+import { formatDateTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,41 +20,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useToast } from '@/components/ui/toast';
+import {
+  WeeklyAgendaCalendar,
+  STATUS_LABELS,
+  addDays,
+  startOfWeek,
+  type CalendarAppointment,
+} from '@/components/agenda/WeeklyAgendaCalendar';
 import type { Appointment, AppointmentStatus, Patient, Professional, Service } from '@/types';
-
-const START_HOUR = 8;
-const END_HOUR = 18;
-const HOUR_HEIGHT = 56; // px por hora
-const DAYS_OF_WEEK = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-
-const STATUS_STYLES: Record<AppointmentStatus, string> = {
-  SCHEDULED: 'bg-primary/15 border-primary text-primary',
-  CONFIRMED: 'bg-mint/15 border-mint text-mint',
-  CANCELED: 'bg-muted border-muted-foreground/40 text-muted-foreground line-through',
-  FINISHED: 'bg-emerald-100 border-emerald-500 text-emerald-700',
-  NO_SHOW: 'bg-amber-100 border-amber-500 text-amber-700',
-};
-
-const STATUS_LABELS: Record<AppointmentStatus, string> = {
-  SCHEDULED: 'Agendado',
-  CONFIRMED: 'Confirmado',
-  CANCELED: 'Cancelado',
-  FINISHED: 'Finalizado',
-  NO_SHOW: 'Falta',
-};
-
-function startOfWeek(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - d.getDay());
-  return d;
-}
-
-function addDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
 
 const newAppointmentSchema = z.object({
   patientId: z.string().min(1, 'Selecione o paciente'),
@@ -68,6 +42,7 @@ type NewAppointmentForm = z.infer<typeof newAppointmentSchema>;
 
 export function Agenda() {
   const { user } = useAuth();
+  const toast = useToast();
   const queryClient = useQueryClient();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const [selected, setSelected] = useState<Appointment | null>(null);
@@ -120,6 +95,7 @@ export function Agenda() {
     onSuccess: () => {
       setCreating(false);
       setError(null);
+      toast.success('Agendamento criado.');
       invalidate();
     },
     onError: (err) => setError(apiErrorMessage(err)),
@@ -128,8 +104,11 @@ export function Agenda() {
   const rescheduleMutation = useMutation({
     mutationFn: async ({ id, startsAt }: { id: string; startsAt: Date }) =>
       api.put(`/appointments/${id}/reschedule`, { startsAt: startsAt.toISOString() }),
-    onSuccess: () => invalidate(),
-    onError: (err) => window.alert(apiErrorMessage(err)),
+    onSuccess: () => {
+      toast.success('Consulta remarcada.');
+      invalidate();
+    },
+    onError: (err) => toast.error('Não foi possível remarcar', apiErrorMessage(err)),
   });
 
   const statusMutation = useMutation({
@@ -137,9 +116,10 @@ export function Agenda() {
       api.patch(`/appointments/${id}/status`, { status }),
     onSuccess: () => {
       setSelected(null);
+      toast.success('Status atualizado.');
       invalidate();
     },
-    onError: (err) => window.alert(apiErrorMessage(err)),
+    onError: (err) => toast.error('Erro ao atualizar status', apiErrorMessage(err)),
   });
 
   const {
@@ -149,45 +129,26 @@ export function Agenda() {
     formState: { errors },
   } = useForm<NewAppointmentForm>({ resolver: zodResolver(newAppointmentSchema) });
 
-  function handleDrop(e: React.DragEvent<HTMLDivElement>, dayIndex: number) {
-    e.preventDefault();
-    if (!canManage) return;
-    const id = e.dataTransfer.getData('text/plain');
-    if (!id) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    const minutesFromStart = Math.max(0, Math.round((y / HOUR_HEIGHT) * 60 / 30) * 30);
-
-    const startsAt = addDays(weekStart, dayIndex);
-    startsAt.setHours(START_HOUR, minutesFromStart, 0, 0);
-
-    rescheduleMutation.mutate({ id, startsAt });
+  function handleAppointmentClick(a: CalendarAppointment) {
+    const full = appointments.find((ap) => ap.id === a.id);
+    if (full) setSelected(full);
   }
-
-  const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
-  const today = new Date();
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Agenda</h1>
-          <p className="text-sm text-muted-foreground">
-            {weekStart.toLocaleDateString('pt-BR')} — {addDays(weekStart, 6).toLocaleDateString('pt-BR')}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setWeekStart((w) => addDays(w, -7))}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" onClick={() => setWeekStart(startOfWeek(new Date()))}>
-            Hoje
-          </Button>
-          <Button variant="outline" size="icon" onClick={() => setWeekStart((w) => addDays(w, 7))}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          {canManage && (
+      <div>
+        <h1 className="text-2xl font-bold">Agenda</h1>
+      </div>
+
+      <WeeklyAgendaCalendar
+        weekStart={weekStart}
+        onWeekChange={setWeekStart}
+        appointments={appointments}
+        canDragDrop={canManage}
+        onAppointmentClick={handleAppointmentClick}
+        onReschedule={(id, startsAt) => rescheduleMutation.mutate({ id, startsAt })}
+        headerExtra={
+          canManage ? (
             <Button
               data-cy="new-appointment"
               onClick={() => {
@@ -198,113 +159,15 @@ export function Agenda() {
             >
               <Plus className="h-4 w-4" /> Novo agendamento
             </Button>
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+        dragHint={
+          canManage
+            ? 'Dica: arraste um agendamento para outro horário para remarcá-lo.'
+            : 'Clique em um agendamento para ver os detalhes.'
+        }
+      />
 
-      {/* Grade semanal estilo Google Calendar */}
-      <div className="overflow-x-auto rounded-lg border bg-card">
-        <div className="min-w-[900px]">
-          <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b">
-            <div />
-            {Array.from({ length: 7 }, (_, i) => {
-              const day = addDays(weekStart, i);
-              const isToday = day.toDateString() === today.toDateString();
-              return (
-                <div
-                  key={i}
-                  className={cn(
-                    'border-l p-2 text-center text-sm',
-                    isToday && 'bg-primary/5 font-semibold text-primary',
-                  )}
-                >
-                  <p className="text-xs text-muted-foreground">{DAYS_OF_WEEK[day.getDay()]}</p>
-                  <p>{day.getDate()}</p>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="grid grid-cols-[60px_repeat(7,1fr)]">
-            <div>
-              {hours.map((h) => (
-                <div
-                  key={h}
-                  className="relative border-b text-right text-[11px] text-muted-foreground"
-                  style={{ height: HOUR_HEIGHT }}
-                >
-                  <span className="absolute -top-2 right-1">{String(h).padStart(2, '0')}:00</span>
-                </div>
-              ))}
-            </div>
-
-            {Array.from({ length: 7 }, (_, dayIndex) => {
-              const day = addDays(weekStart, dayIndex);
-              const dayAppointments = appointments.filter(
-                (a) => new Date(a.startsAt).toDateString() === day.toDateString(),
-              );
-
-              return (
-                <div
-                  key={dayIndex}
-                  className="relative border-l"
-                  style={{ height: hours.length * HOUR_HEIGHT }}
-                  onDragOver={(e) => canManage && e.preventDefault()}
-                  onDrop={(e) => handleDrop(e, dayIndex)}
-                >
-                  {hours.map((h) => (
-                    <div
-                      key={h}
-                      className="border-b border-dashed border-border/60"
-                      style={{ height: HOUR_HEIGHT }}
-                    />
-                  ))}
-
-                  {dayAppointments.map((a) => {
-                    const start = new Date(a.startsAt);
-                    const end = new Date(a.endsAt);
-                    const top =
-                      ((start.getHours() - START_HOUR) * 60 + start.getMinutes()) *
-                      (HOUR_HEIGHT / 60);
-                    const height = Math.max(
-                      24,
-                      ((end.getTime() - start.getTime()) / 60_000) * (HOUR_HEIGHT / 60),
-                    );
-
-                    return (
-                      <button
-                        key={a.id}
-                        data-cy="appointment-card"
-                        draggable={canManage && a.status !== 'CANCELED' && a.status !== 'FINISHED'}
-                        onDragStart={(e) => e.dataTransfer.setData('text/plain', a.id)}
-                        onClick={() => setSelected(a)}
-                        className={cn(
-                          'absolute left-1 right-1 z-10 overflow-hidden rounded-md border-l-4 px-2 py-1 text-left text-[11px] leading-tight shadow-sm transition-shadow hover:shadow-md',
-                          STATUS_STYLES[a.status],
-                        )}
-                        style={{ top, height }}
-                      >
-                        <p className="truncate font-semibold">{a.patient.name}</p>
-                        <p className="truncate">
-                          {formatTime(a.startsAt)} · {a.service.name}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      <p className="text-xs text-muted-foreground">
-        {canManage
-          ? 'Dica: arraste um agendamento para outro horário para remarcá-lo.'
-          : 'Clique em um agendamento para ver os detalhes.'}
-      </p>
-
-      {/* Dialog: novo agendamento */}
       <Dialog open={creating} onOpenChange={setCreating}>
         <DialogContent>
           <DialogHeader>
@@ -398,7 +261,6 @@ export function Agenda() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: detalhes do agendamento */}
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent>
           {selected && (

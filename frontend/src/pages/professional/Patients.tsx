@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { MessageSquare, Phone } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -12,12 +12,22 @@ import type { ProfessionalAppointment, ProfessionalPatient } from '@/types';
 
 export function ProfessionalPatientsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [historyOf, setHistoryOf] = useState<ProfessionalPatient | null>(null);
+
+  const highlightId = searchParams.get('highlight');
 
   const { data: patients = [], isLoading } = useQuery({
     queryKey: ['professional', 'patients'],
     queryFn: async () => (await api.get<ProfessionalPatient[]>('/professional/patients')).data,
+  });
+
+  const { data: highlightHistory = [] } = useQuery({
+    queryKey: ['professional', 'patient-history', highlightId],
+    queryFn: async () =>
+      (await api.get<ProfessionalAppointment[]>(`/professional/patients/${highlightId}/history`)).data,
+    enabled: !!highlightId,
   });
 
   const { data: history = [] } = useQuery({
@@ -26,6 +36,32 @@ export function ProfessionalPatientsPage() {
       (await api.get<ProfessionalAppointment[]>(`/professional/patients/${historyOf!.id}/history`)).data,
     enabled: !!historyOf,
   });
+
+  useEffect(() => {
+    if (!highlightId) return;
+    const fromList = patients.find((p) => p.id === highlightId);
+    if (fromList) {
+      setHistoryOf(fromList);
+      return;
+    }
+    if (highlightHistory.length > 0) {
+      const p = highlightHistory[0].patient;
+      setHistoryOf({
+        id: p.id,
+        name: p.name,
+        phone: p.phone,
+        email: '',
+        userId: p.userId ?? null,
+        totalConsultations: highlightHistory.length,
+        lastConsultation: highlightHistory[0].startsAt,
+      });
+    }
+  }, [highlightId, patients, highlightHistory]);
+
+  function closeHistory() {
+    setHistoryOf(null);
+    if (highlightId) setSearchParams({});
+  }
 
   const filtered = patients.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -45,7 +81,7 @@ export function ProfessionalPatientsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((p) => (
-            <Card key={p.id}>
+            <Card key={p.id} id={`patient-${p.id}`}>
               <CardContent className="space-y-2 p-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
@@ -67,7 +103,7 @@ export function ProfessionalPatientsPage() {
                     Ver histórico
                   </Button>
                   {p.userId && (
-                    <Button size="sm" onClick={() => navigate('/profissional/mensagens')}>
+                    <Button size="sm" onClick={() => navigate(`/profissional/mensagens?with=${p.userId}`)}>
                       <MessageSquare className="h-4 w-4" /> Mensagem
                     </Button>
                   )}
@@ -79,7 +115,7 @@ export function ProfessionalPatientsPage() {
       )}
 
       {historyOf && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setHistoryOf(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={closeHistory}>
           <div className="absolute inset-0 bg-black/50" />
           <Card className="relative z-10 max-h-[80vh] w-full max-w-lg overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <CardContent className="p-5">
@@ -99,9 +135,19 @@ export function ProfessionalPatientsPage() {
                   ))}
                 </div>
               )}
-              <Button variant="outline" className="mt-4 w-full" onClick={() => setHistoryOf(null)}>
-                Fechar
-              </Button>
+              <div className="mt-4 flex gap-2">
+                {historyOf.userId && (
+                  <Button
+                    className="flex-1"
+                    onClick={() => navigate(`/profissional/mensagens?with=${historyOf.userId}`)}
+                  >
+                    <MessageSquare className="h-4 w-4" /> Abrir Conversa
+                  </Button>
+                )}
+                <Button variant="outline" className="flex-1" onClick={closeHistory}>
+                  Fechar
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

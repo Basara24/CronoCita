@@ -9,7 +9,9 @@ export class MessagesController {
   };
 
   conversation = async (req: Request, res: Response): Promise<void> => {
-    res.json(await messagesService.getConversation(req.user!.id, req.params.withUserId));
+    res.json(
+      await messagesService.getConversation(req.user!.id, req.params.withUserId, req.user!.role),
+    );
   };
 
   send = async (req: Request, res: Response): Promise<void> => {

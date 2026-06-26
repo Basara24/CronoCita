@@ -190,6 +190,14 @@ export interface ProfessionalService {
   status: ResourceStatus;
 }
 
+export interface MessagingContact {
+  userId: string;
+  name: string;
+  avatarUrl?: string | null;
+  nextAppointment: string | null;
+  lastAttendance: string | null;
+}
+
 export interface ProfessionalProfile {
   id: string;
   name: string;
@@ -199,6 +207,11 @@ export interface ProfessionalProfile {
   commissionPercentage: string | number;
   clinicId: string;
   avatarUrl?: string | null;
+  clinic?: {
+    name: string;
+    logoUrl?: string | null;
+    coverImageUrl?: string | null;
+  };
 }
 
 export interface PatientProfile {
@@ -304,6 +317,7 @@ export interface Patient {
   email: string;
   phone: string;
   birthDate: string;
+  userId?: string | null;
   address?: string | null;
   city?: string | null;
   state?: string | null;

@@ -47,6 +47,18 @@ export class ClinicsSelfController {
     if (!req.file) throw new AppError('Nenhum arquivo enviado');
     res.status(201).json({ url: clinicPublicUrl(req.file.filename) });
   };
+
+  uploadLogo = async (req: Request, res: Response): Promise<void> => {
+    if (!req.file) throw new AppError('Nenhum arquivo enviado');
+    const url = clinicPublicUrl(req.file.filename);
+    res.status(201).json(await clinicsSelfService.uploadLogo(req.user!.clinicId, url));
+  };
+
+  uploadCover = async (req: Request, res: Response): Promise<void> => {
+    if (!req.file) throw new AppError('Nenhum arquivo enviado');
+    const url = clinicPublicUrl(req.file.filename);
+    res.status(201).json(await clinicsSelfService.uploadCover(req.user!.clinicId, url));
+  };
 }
 
 export const clinicsSelfController = new ClinicsSelfController();
