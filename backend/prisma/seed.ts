@@ -60,6 +60,15 @@ interface SeedClinic {
 
 const PASSWORD = '123456';
 
+// Coordenadas aproximadas por cidade (para o mapa keyless e ordenação "próximas")
+const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
+  'Campo Mourão': { lat: -24.0463, lng: -52.3789 },
+  Maringá: { lat: -23.4209, lng: -51.9331 },
+  Curitiba: { lat: -25.4284, lng: -49.2733 },
+};
+
+const PHOTO_CATEGORIES = ['RECEPTION', 'CONSULTORIO', 'EQUIPMENT', 'TEAM', 'FACADE'] as const;
+
 const CLINICS: SeedClinic[] = [
   {
     name: 'Clínica Viver Bem',
@@ -189,6 +198,9 @@ async function clearDatabase(): Promise<void> {
   await prisma.message.deleteMany();
   await prisma.userNotification.deleteMany();
   await prisma.notification.deleteMany();
+  await prisma.favorite.deleteMany();
+  await prisma.contact.deleteMany();
+  await prisma.scheduleBlock.deleteMany();
   await prisma.commission.deleteMany();
   await prisma.appointment.deleteMany();
   await prisma.serviceEquipment.deleteMany();
@@ -197,6 +209,7 @@ async function clearDatabase(): Promise<void> {
   await prisma.room.deleteMany();
   await prisma.patient.deleteMany();
   await prisma.professional.deleteMany();
+  await prisma.clinicPhoto.deleteMany();
   await prisma.refreshToken.deleteMany();
   await prisma.passwordResetToken.deleteMany();
   await prisma.subscription.deleteMany();
@@ -206,6 +219,9 @@ async function clearDatabase(): Promise<void> {
 }
 
 async function seedClinic(data: SeedClinic, password: string): Promise<void> {
+  const coords = CITY_COORDS[data.city] ?? { lat: -23.5505, lng: -46.6333 };
+  const handle = data.slug.replace(/-/g, '');
+
   const clinic = await prisma.clinic.create({
     data: {
       name: data.name,
@@ -215,6 +231,12 @@ async function seedClinic(data: SeedClinic, password: string): Promise<void> {
       phone: data.phone,
       description: data.description,
       logoUrl: data.logoUrl,
+      coverImageUrl: `https://picsum.photos/seed/${data.slug}-cover/1200/400`,
+      website: `https://${handle}.com.br`,
+      instagram: `https://instagram.com/${handle}`,
+      facebook: `https://facebook.com/${handle}`,
+      latitude: coords.lat,
+      longitude: coords.lng,
       address: data.address,
       city: data.city,
       state: data.state,
@@ -223,6 +245,13 @@ async function seedClinic(data: SeedClinic, password: string): Promise<void> {
       specialties: { create: data.specialties.map((specialty) => ({ specialty })) },
       subscription: {
         create: { plan: data.plan, status: 'ACTIVE', price: data.price, startsAt: at(-30, 9) },
+      },
+      photos: {
+        create: PHOTO_CATEGORIES.map((category, i) => ({
+          url: `https://picsum.photos/seed/${data.slug}-${i}/800/600`,
+          category,
+          caption: `${data.name} - ${category}`,
+        })),
       },
     },
   });
@@ -278,17 +307,23 @@ async function seedClinic(data: SeedClinic, password: string): Promise<void> {
     );
   }
 
-  // Serviços
+  // Serviços (vincula a um profissional quando há correspondência por índice)
   const services = [];
-  for (const s of data.services) {
+  for (let si = 0; si < data.services.length; si += 1) {
+    const s = data.services[si];
+    const linkedProfessional = professionals[si] ?? professionals[si % professionals.length] ?? null;
     services.push(
       await prisma.service.create({
         data: {
           clinicId: clinic.id,
+          professionalId: linkedProfessional?.id ?? null,
           name: s.name,
+          description: `${s.name} realizado por equipe especializada da ${data.name}.`,
           durationMinutes: s.durationMinutes,
           price: s.price,
+          imageUrl: `https://picsum.photos/seed/${data.slug}-svc-${si}/600/400`,
           requiresRoom: s.requiresRoom,
+          status: 'ACTIVE',
           equipments: { create: s.equipmentIndexes.map((i) => ({ equipmentId: equipments[i].id })) },
         },
       }),
@@ -379,6 +414,18 @@ async function seedClinic(data: SeedClinic, password: string): Promise<void> {
         },
       });
     }
+  }
+
+  // Atualiza o cache de rating da clínica com a média das avaliações finalizadas
+  const ratingAgg = await prisma.appointment.aggregate({
+    where: { clinicId: clinic.id, status: 'FINISHED', rating: { not: null } },
+    _avg: { rating: true },
+  });
+  if (ratingAgg._avg.rating != null) {
+    await prisma.clinic.update({
+      where: { id: clinic.id },
+      data: { rating: Number(ratingAgg._avg.rating.toFixed(2)) },
+    });
   }
 
   console.log(`  ✓ ${data.name} (${data.slug}) — admin: ${data.adminEmail}`);
@@ -513,7 +560,37 @@ async function seedPatientPortal(password: string): Promise<void> {
     });
   }
 
+  // Clínicas favoritas de João (funcionalidade real de favoritos)
+  const favClinics = await prisma.clinic.findMany({
+    where: { slug: { in: ['clinica-viver-bem', 'espaco-saude-integrada'] } },
+  });
+  for (const c of favClinics) {
+    await prisma.favorite.create({ data: { userId: joao.id, clinicId: c.id } });
+  }
+
   console.log('  ✓ Pacientes demo: joao@cliente.com, maria@cliente.com');
+}
+
+async function seedContacts(): Promise<void> {
+  await prisma.contact.createMany({
+    data: [
+      {
+        name: 'Carlos Visitante',
+        email: 'carlos.visitante@email.com',
+        subject: 'Dúvida sobre planos',
+        message: 'Gostaria de saber como funciona o cadastro de uma clínica na plataforma CronoCita.',
+        status: 'NEW',
+      },
+      {
+        name: 'Beatriz Souza',
+        email: 'beatriz.souza@email.com',
+        subject: 'Parceria',
+        message: 'Tenho interesse em uma parceria para divulgação. Podem me retornar?',
+        status: 'READ',
+      },
+    ],
+  });
+  console.log('  ✓ Contatos demo (Fale Conosco)');
 }
 
 async function main() {
@@ -546,6 +623,7 @@ async function main() {
   }
 
   await seedPatientPortal(password);
+  await seedContacts();
 
   console.log('✅ Seed concluído com sucesso!');
   console.log('---------------------------------------------');

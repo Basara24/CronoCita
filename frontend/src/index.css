@@ -36,6 +36,36 @@
     --radius: 0.625rem;
   }
 
+  .dark {
+    --background: 215 30% 10%;
+    --foreground: 210 30% 92%;
+
+    --card: 215 28% 14%;
+    --card-foreground: 210 30% 92%;
+
+    --primary: 210 85% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 215 25% 20%;
+    --secondary-foreground: 210 40% 90%;
+
+    --mint: 160 55% 45%;
+    --mint-foreground: 0 0% 100%;
+
+    --muted: 215 25% 18%;
+    --muted-foreground: 215 15% 65%;
+
+    --accent: 160 40% 20%;
+    --accent-foreground: 160 55% 80%;
+
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 215 20% 24%;
+    --input: 215 20% 24%;
+    --ring: 210 85% 55%;
+  }
+
   * {
     @apply border-border;
   }
@@ -43,5 +73,26 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-enter {
+  animation: toast-in 0.2s ease-out;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
   }
 }

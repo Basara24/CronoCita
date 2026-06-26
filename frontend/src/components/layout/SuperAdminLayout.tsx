@@ -5,6 +5,7 @@ import {
   CreditCard,
   LayoutDashboard,
   LogOut,
+  Mail,
   Menu,
   Settings,
   ShieldCheck,
@@ -15,12 +16,14 @@ import {
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const NAV_ITEMS = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/clinicas', label: 'Clínicas', icon: Building2, end: false },
   { to: '/admin/usuarios', label: 'Usuários', icon: Users, end: false },
   { to: '/admin/assinaturas', label: 'Assinaturas', icon: CreditCard, end: false },
+  { to: '/admin/contatos', label: 'Contatos', icon: Mail, end: false },
   { to: '/admin/relatorios', label: 'Relatórios', icon: BarChart3, end: false },
   { to: '/admin/configuracoes', label: 'Configurações', icon: Settings, end: false },
 ];
@@ -39,14 +42,17 @@ export function SuperAdminLayout() {
 
   const sidebar = (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center gap-2 border-b px-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <ShieldCheck className="h-5 w-5" />
+      <div className="flex h-16 items-center justify-between gap-2 border-b px-5">
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-base font-bold leading-none text-primary">CronoCita</p>
+            <p className="text-[11px] text-muted-foreground">Plataforma</p>
+          </div>
         </div>
-        <div>
-          <p className="text-base font-bold leading-none text-primary">CronoCita</p>
-          <p className="text-[11px] text-muted-foreground">Plataforma</p>
-        </div>
+        <ThemeToggle />
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">

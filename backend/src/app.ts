@@ -18,6 +18,8 @@ import { subscriptionsRoutes } from './modules/subscriptions/subscriptions.route
 import { platformRoutes } from './modules/platform/platform.routes';
 import { patientPortalRoutes } from './modules/patient-portal/patient-portal.routes';
 import { messagesRoutes } from './modules/messages/messages.routes';
+import { contactsRoutes } from './modules/contacts/contacts.routes';
+import { professionalPortalRoutes } from './modules/professional-portal/professional-portal.routes';
 
 export function createApp(): express.Express {
   const app = express();
@@ -46,7 +48,9 @@ export function createApp(): express.Express {
   app.use('/api/subscriptions', subscriptionsRoutes);
   app.use('/api/admin', platformRoutes);
   app.use('/api/me', patientPortalRoutes);
+  app.use('/api/professional', professionalPortalRoutes);
   app.use('/api/messages', messagesRoutes);
+  app.use('/api/contacts', contactsRoutes);
   app.use('/api/public', publicRoutes);
 
   app.use(errorHandler);

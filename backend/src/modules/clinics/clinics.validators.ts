@@ -27,3 +27,30 @@ export const updateClinicSchema = createClinicSchema.omit({ admin: true }).parti
 export const updateStatusSchema = z.object({
   status: z.enum(['ACTIVE', 'INACTIVE']),
 });
+
+const optionalUrl = z.string().url('URL inválida').optional().or(z.literal(''));
+
+/** Edição da própria clínica pelo CLINIC_ADMIN (identidade visual, social, localização). */
+export const updateOwnClinicSchema = z.object({
+  name: z.string().min(2, 'Nome inválido').optional(),
+  description: z.string().optional(),
+  phone: z.string().min(8, 'Telefone inválido').optional(),
+  email: z.string().email('E-mail inválido').optional(),
+  logoUrl: optionalUrl,
+  coverImageUrl: optionalUrl,
+  website: optionalUrl,
+  instagram: optionalUrl,
+  facebook: optionalUrl,
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
+  latitude: z.number().min(-90).max(90).optional().nullable(),
+  longitude: z.number().min(-180).max(180).optional().nullable(),
+});
+
+export const addPhotoSchema = z.object({
+  url: z.string().min(1, 'URL obrigatória'),
+  category: z.enum(['RECEPTION', 'CONSULTORIO', 'EQUIPMENT', 'TEAM', 'FACADE', 'OTHER']).optional(),
+  caption: z.string().optional(),
+});

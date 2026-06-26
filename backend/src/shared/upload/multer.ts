@@ -6,33 +6,77 @@ import { AppError } from '../errors/AppError';
 
 /** Diretório raiz dos uploads (persistido em volume Docker em produção). */
 export const UPLOAD_ROOT = path.resolve(process.cwd(), 'uploads');
-const AVATAR_DIR = path.join(UPLOAD_ROOT, 'avatars');
 
-fs.mkdirSync(AVATAR_DIR, { recursive: true });
+const IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const ATTACHMENT_MIME = [...IMAGE_MIME, 'application/pdf'];
 
-const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+function ensureDir(sub: string): string {
+  const dir = path.join(UPLOAD_ROOT, sub);
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, AVATAR_DIR),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-    cb(null, `${crypto.randomBytes(16).toString('hex')}${ext}`);
-  },
-});
+function makeStorage(sub: string): multer.StorageEngine {
+  const dir = ensureDir(sub);
+  return multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, dir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || '.bin';
+      cb(null, `${crypto.randomBytes(16).toString('hex')}${ext}`);
+    },
+  });
+}
 
-export const avatarUpload = multer({
-  storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
-  fileFilter: (_req, file, cb) => {
-    if (!ALLOWED_MIME.includes(file.mimetype)) {
-      cb(new AppError('Formato de imagem inválido (use JPG, PNG, WEBP ou GIF)', 400));
+function imageFilter(allowed: string[], label: string): multer.Options['fileFilter'] {
+  return (_req, file, cb) => {
+    if (!allowed.includes(file.mimetype)) {
+      cb(new AppError(label, 400));
       return;
     }
     cb(null, true);
-  },
+  };
+}
+
+const IMAGE_ERROR = 'Formato de imagem inválido (use JPG, PNG, WEBP ou GIF)';
+const ATTACHMENT_ERROR = 'Formato inválido (use JPG, PNG, WEBP, GIF ou PDF)';
+
+export const avatarUpload = multer({
+  storage: makeStorage('avatars'),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: imageFilter(IMAGE_MIME, IMAGE_ERROR),
+});
+
+export const clinicUpload = multer({
+  storage: makeStorage('clinic'),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: imageFilter(IMAGE_MIME, IMAGE_ERROR),
+});
+
+export const serviceUpload = multer({
+  storage: makeStorage('services'),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: imageFilter(IMAGE_MIME, IMAGE_ERROR),
+});
+
+export const messageUpload = multer({
+  storage: makeStorage('messages'),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: imageFilter(ATTACHMENT_MIME, ATTACHMENT_ERROR),
 });
 
 /** Monta a URL pública servida pelo backend a partir do arquivo salvo. */
 export function avatarPublicUrl(filename: string): string {
   return `/uploads/avatars/${filename}`;
+}
+
+export function clinicPublicUrl(filename: string): string {
+  return `/uploads/clinic/${filename}`;
+}
+
+export function servicePublicUrl(filename: string): string {
+  return `/uploads/services/${filename}`;
+}
+
+export function messagePublicUrl(filename: string): string {
+  return `/uploads/messages/${filename}`;
 }

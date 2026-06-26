@@ -31,6 +31,7 @@ export interface IAppointmentsRepository {
    * e disputam o mesmo profissional, sala ou equipamento (dentro da clínica).
    */
   findConflicts(input: AvailabilityCheckDTO): Promise<Appointment[]>;
+  countScheduleBlocks(professionalId: string, startsAt: Date, endsAt: Date): Promise<number>;
   create(clinicId: string, data: Prisma.AppointmentUncheckedCreateInput): Promise<AppointmentWithRelations>;
   update(id: string, data: Prisma.AppointmentUncheckedUpdateInput): Promise<AppointmentWithRelations>;
   findFreeRoom(clinicId: string, startsAt: Date, endsAt: Date): Promise<Room | null>;
@@ -76,6 +77,16 @@ export class AppointmentsRepository implements IAppointmentsRepository {
         startsAt: { lt: input.endsAt },
         endsAt: { gt: input.startsAt },
         OR: resourceFilters,
+      },
+    });
+  }
+
+  async countScheduleBlocks(professionalId: string, startsAt: Date, endsAt: Date): Promise<number> {
+    return prisma.scheduleBlock.count({
+      where: {
+        professionalId,
+        startsAt: { lt: endsAt },
+        endsAt: { gt: startsAt },
       },
     });
   }

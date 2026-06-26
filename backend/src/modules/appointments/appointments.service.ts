@@ -1,4 +1,5 @@
 import { AppError, ConflictError, NotFoundError } from '../../shared/errors/AppError';
+import { prisma } from '../../shared/database/prisma';
 import { addMinutes } from '../../shared/utils/date';
 import { NotificationService } from '../../shared/notifications/NotificationService';
 import { userNotificationService } from '../notifications/userNotification.service';
@@ -258,6 +259,11 @@ export class AppointmentsService {
     });
     const busy = appointments.filter((a) => a.status !== 'CANCELED');
 
+    // Bloqueios de agenda do profissional que se sobrepõem ao dia consultado
+    const blocks = await prisma.scheduleBlock.findMany({
+      where: { professionalId, startsAt: { lt: dayEnd }, endsAt: { gt: dayStart } },
+    });
+
     const now = new Date();
     const slots: string[] = [];
 
@@ -274,6 +280,9 @@ export class AppointmentsService {
         (a) => a.startsAt < slotEnd && a.endsAt > slotStart,
       );
       if (professionalBusy) continue;
+
+      const blocked = blocks.some((b) => b.startsAt < slotEnd && b.endsAt > slotStart);
+      if (blocked) continue;
 
       if (service.requiresRoom) {
         const freeRoom = await this.repository.findFreeRoom(clinicId, slotStart, slotEnd);

@@ -88,4 +88,26 @@ describe('checkAvailability()', () => {
     await checker.checkAvailability(baseInput);
     expect(repository.findConflicts).toHaveBeenCalledWith(baseInput);
   });
+
+  it('rejeita quando há bloqueio de agenda do profissional', async () => {
+    const repository = {
+      findConflicts: jest.fn(async () => []),
+      countScheduleBlocks: jest.fn(async () => 1),
+    };
+    const checker = new AvailabilityChecker(repository);
+    await expect(checker.checkAvailability(baseInput)).rejects.toThrow(
+      'Horário bloqueado na agenda do profissional.',
+    );
+    expect(repository.findConflicts).not.toHaveBeenCalled();
+  });
+
+  it('permite agendar quando não há bloqueio de agenda', async () => {
+    const repository = {
+      findConflicts: jest.fn(async () => []),
+      countScheduleBlocks: jest.fn(async () => 0),
+    };
+    const checker = new AvailabilityChecker(repository);
+    await expect(checker.checkAvailability(baseInput)).resolves.toBeUndefined();
+    expect(repository.countScheduleBlocks).toHaveBeenCalled();
+  });
 });

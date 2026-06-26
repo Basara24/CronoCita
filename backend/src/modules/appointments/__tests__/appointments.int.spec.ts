@@ -8,6 +8,7 @@ jest.mock('../../../shared/database/prisma', () => ({
     professional: { findFirst: jest.fn(), findUnique: jest.fn() },
     patient: { findFirst: jest.fn(), findUnique: jest.fn() },
     appointment: { findMany: jest.fn(), findFirst: jest.fn(), create: jest.fn() },
+    scheduleBlock: { count: jest.fn() },
     room: { findFirst: jest.fn() },
     equipment: { findFirst: jest.fn() },
     notification: { create: jest.fn(), update: jest.fn() },
@@ -65,6 +66,7 @@ function mockEntities() {
     name: 'João',
     phone: '(11) 90000-0000',
   });
+  (prisma as unknown as { scheduleBlock: { count: jest.Mock } }).scheduleBlock.count.mockResolvedValue(0);
 }
 
 beforeEach(() => {

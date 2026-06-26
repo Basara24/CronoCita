@@ -7,6 +7,7 @@ jest.mock('../../../shared/database/prisma', () => ({
     appointment: { findMany: jest.fn(), findFirst: jest.fn(), count: jest.fn() },
     userNotification: { count: jest.fn(), findMany: jest.fn() },
     message: { findMany: jest.fn() },
+    favorite: { count: jest.fn() },
   },
 }));
 
@@ -69,6 +70,7 @@ describe('GET /api/me/appointments (portal do paciente)', () => {
     mocked.appointment.findFirst.mockResolvedValue({ id: 'a1', clinic: { name: 'Clínica A' } });
     mocked.appointment.count.mockResolvedValue(3);
     mocked.userNotification.count.mockResolvedValue(2);
+    (prisma as unknown as { favorite: { count: jest.Mock } }).favorite.count.mockResolvedValue(1);
 
     const res = await request(app)
       .get('/api/me/dashboard')

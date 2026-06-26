@@ -77,6 +77,128 @@ export interface PatientDashboard {
   completedCount: number;
   clinicsVisited: number;
   unreadNotifications: number;
+  favoritesCount: number;
+}
+
+export interface FavoriteClinic {
+  id: string;
+  name: string;
+  slug: string;
+  city: string;
+  state: string;
+  logoUrl?: string | null;
+  coverImageUrl?: string | null;
+  rating?: string | number | null;
+  specialties: string[];
+  favoritedAt?: string;
+}
+
+export interface FeaturedClinics {
+  popular: FavoriteClinic[];
+  topRated: FavoriteClinic[];
+  nearby: FavoriteClinic[];
+}
+
+export type ClinicPhotoCategory = 'RECEPTION' | 'CONSULTORIO' | 'EQUIPMENT' | 'TEAM' | 'FACADE' | 'OTHER';
+
+export interface ClinicPhoto {
+  id: string;
+  url: string;
+  category: ClinicPhotoCategory;
+  caption?: string | null;
+}
+
+export interface ClinicSelf {
+  id: string;
+  name: string;
+  description?: string | null;
+  phone: string;
+  email: string;
+  logoUrl?: string | null;
+  coverImageUrl?: string | null;
+  website?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  latitude?: string | number | null;
+  longitude?: string | number | null;
+  specialties: { specialty: string }[];
+  photos: ClinicPhoto[];
+}
+
+export interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: 'NEW' | 'READ' | 'RESOLVED';
+  createdAt: string;
+}
+
+export interface ScheduleBlock {
+  id: string;
+  professionalId: string;
+  clinicId: string;
+  startsAt: string;
+  endsAt: string;
+  reason?: string | null;
+  createdAt: string;
+}
+
+export interface ProfessionalDashboard {
+  professional: { id: string; name: string; specialty: string };
+  todayCount: number;
+  todayAppointments: ProfessionalAppointment[];
+  attendedPatients: number;
+  upcomingCount: number;
+  averageRating: number | null;
+}
+
+export interface ProfessionalAppointment {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  status: AppointmentStatus;
+  rating?: number | null;
+  patient: { id: string; name: string; phone: string; userId?: string | null };
+  service: { id: string; name: string; durationMinutes: number; price: string | number };
+  room?: { id: string; name: string } | null;
+}
+
+export interface ProfessionalPatient {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  userId?: string | null;
+  totalConsultations: number;
+  lastConsultation: string | null;
+}
+
+export interface ProfessionalService {
+  id: string;
+  name: string;
+  description?: string | null;
+  durationMinutes: number;
+  price: string | number;
+  imageUrl?: string | null;
+  requiresRoom: boolean;
+  status: ResourceStatus;
+}
+
+export interface ProfessionalProfile {
+  id: string;
+  name: string;
+  specialty: string;
+  phone: string;
+  email: string;
+  commissionPercentage: string | number;
+  clinicId: string;
+  avatarUrl?: string | null;
 }
 
 export interface PatientProfile {
@@ -146,6 +268,8 @@ export interface PublicClinicSummary {
   city: string;
   state: string;
   logoUrl?: string | null;
+  coverImageUrl?: string | null;
+  rating?: string | number | null;
   description?: string | null;
   specialties: string[];
 }
@@ -155,8 +279,22 @@ export interface PublicClinicDetail extends PublicClinicSummary {
   email: string;
   address: string;
   zipCode: string;
+  website?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
+  latitude?: string | number | null;
+  longitude?: string | number | null;
+  photos: ClinicPhoto[];
   professionals: { id: string; name: string; specialty: string }[];
-  services: { id: string; name: string; durationMinutes: number; price: string | number }[];
+  services: {
+    id: string;
+    name: string;
+    description?: string | null;
+    durationMinutes: number;
+    price: string | number;
+    imageUrl?: string | null;
+    professionalId?: string | null;
+  }[];
 }
 
 export interface Patient {

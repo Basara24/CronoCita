@@ -72,22 +72,44 @@ enum NotificationType {
   SYSTEM
 }
 
+enum ClinicPhotoCategory {
+  RECEPTION
+  CONSULTORIO
+  EQUIPMENT
+  TEAM
+  FACADE
+  OTHER
+}
+
+enum ContactStatus {
+  NEW
+  READ
+  RESOLVED
+}
+
 model Clinic {
-  id          String       @id @default(uuid())
-  name        String
-  slug        String       @unique
-  cnpj        String       @unique
-  email       String
-  phone       String
-  description String?      @db.Text
-  logoUrl     String?
-  address     String
-  city        String
-  state       String
-  zipCode     String
-  status      ClinicStatus @default(ACTIVE)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id            String       @id @default(uuid())
+  name          String
+  slug          String       @unique
+  cnpj          String       @unique
+  email         String
+  phone         String
+  description   String?      @db.Text
+  logoUrl       String?
+  coverImageUrl String?
+  website       String?
+  instagram     String?
+  facebook      String?
+  address       String
+  city          String
+  state         String
+  zipCode       String
+  latitude      Decimal?     @db.Decimal(10, 7)
+  longitude     Decimal?     @db.Decimal(10, 7)
+  rating        Decimal?     @db.Decimal(3, 2)
+  status        ClinicStatus @default(ACTIVE)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   specialties   ClinicSpecialty[]
   subscription  Subscription?
@@ -99,9 +121,25 @@ model Clinic {
   services      Service[]
   appointments  Appointment[]
   commissions   Commission[]
+  photos        ClinicPhoto[]
+  favorites     Favorite[]
 
   @@index([city])
   @@map("clinics")
+}
+
+model ClinicPhoto {
+  id        String              @id @default(uuid())
+  clinicId  String
+  url       String
+  category  ClinicPhotoCategory @default(OTHER)
+  caption   String?
+  createdAt DateTime            @default(now())
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId])
+  @@map("clinic_photos")
 }
 
 model ClinicSpecialty {
@@ -152,9 +190,24 @@ model User {
   notifications       UserNotification[]
   sentMessages        Message[]            @relation("MessageSender")
   receivedMessages    Message[]            @relation("MessageReceiver")
+  favorites           Favorite[]
 
   @@index([clinicId])
   @@map("users")
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  clinicId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clinicId])
+  @@index([userId])
+  @@map("favorites")
 }
 
 model RefreshToken {
@@ -223,14 +276,31 @@ model Professional {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  clinic       Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  appointments Appointment[]
-  commissions  Commission[]
+  clinic         Clinic          @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  appointments   Appointment[]
+  commissions    Commission[]
+  services       Service[]
+  scheduleBlocks ScheduleBlock[]
 
   @@unique([clinicId, email])
   @@index([clinicId])
   @@map("professionals")
+}
+
+model ScheduleBlock {
+  id             String   @id @default(uuid())
+  professionalId String
+  clinicId       String
+  startsAt       DateTime
+  endsAt         DateTime
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@index([professionalId, startsAt])
+  @@map("schedule_blocks")
 }
 
 model Room {
@@ -268,20 +338,26 @@ model Equipment {
 }
 
 model Service {
-  id              String   @id @default(uuid())
+  id              String         @id @default(uuid())
   clinicId        String
+  professionalId  String?
   name            String
+  description     String?        @db.Text
   durationMinutes Int
-  price           Decimal  @db.Decimal(10, 2)
-  requiresRoom    Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  price           Decimal        @db.Decimal(10, 2)
+  imageUrl        String?
+  requiresRoom    Boolean        @default(true)
+  status          ResourceStatus @default(ACTIVE)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   clinic       Clinic             @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  professional Professional?      @relation(fields: [professionalId], references: [id], onDelete: SetNull)
   equipments   ServiceEquipment[]
   appointments Appointment[]
 
   @@index([clinicId])
+  @@index([professionalId])
   @@map("services")
 }
 
@@ -388,6 +464,8 @@ model Message {
   receiverId    String
   appointmentId String?
   content       String    @db.Text
+  attachmentUrl String?
+  isImportant   Boolean   @default(false)
   createdAt     DateTime  @default(now())
   readAt        DateTime?
 
@@ -397,4 +475,17 @@ model Message {
   @@index([senderId, receiverId])
   @@index([receiverId, senderId])
   @@map("messages")
+}
+
+model Contact {
+  id        String        @id @default(uuid())
+  name      String
+  email     String
+  subject   String
+  message   String        @db.Text
+  status    ContactStatus @default(NEW)
+  createdAt DateTime      @default(now())
+
+  @@index([status])
+  @@map("contacts")
 }

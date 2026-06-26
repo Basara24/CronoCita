@@ -7,6 +7,8 @@ export const MIN_CANCEL_HOURS = 2;
 
 interface ConflictFinder {
   findConflicts(input: AvailabilityCheckDTO): Promise<Appointment[]>;
+  /** Conta bloqueios de agenda do profissional que se sobrepõem ao intervalo. */
+  countScheduleBlocks?(professionalId: string, startsAt: Date, endsAt: Date): Promise<number>;
 }
 
 /**
@@ -20,6 +22,18 @@ export class AvailabilityChecker {
   async checkAvailability(input: AvailabilityCheckDTO): Promise<void> {
     if (input.endsAt <= input.startsAt) {
       throw new ConflictError('Horário inválido: o término deve ser após o início.');
+    }
+
+    // Bloqueios de agenda do profissional (férias, ausências, horário bloqueado)
+    if (this.repository.countScheduleBlocks) {
+      const blocked = await this.repository.countScheduleBlocks(
+        input.professionalId,
+        input.startsAt,
+        input.endsAt,
+      );
+      if (blocked > 0) {
+        throw new ConflictError('Horário bloqueado na agenda do profissional.');
+      }
     }
 
     const conflicts = await this.repository.findConflicts(input);

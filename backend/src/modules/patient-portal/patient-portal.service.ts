@@ -58,7 +58,7 @@ export class PatientPortalService {
     const ids = await this.patientIds(userId);
     const now = new Date();
 
-    const [nextAppointment, completedCount, patients, unread] = await Promise.all([
+    const [nextAppointment, completedCount, patients, unread, favoritesCount] = await Promise.all([
       ids.length
         ? prisma.appointment.findFirst({
             where: {
@@ -75,6 +75,7 @@ export class PatientPortalService {
         : 0,
       prisma.patient.findMany({ where: { userId }, select: { clinicId: true } }),
       userNotificationService.countUnread(userId),
+      prisma.favorite.count({ where: { userId } }),
     ]);
 
     const clinicsVisited = new Set(patients.map((p) => p.clinicId)).size;
@@ -84,6 +85,7 @@ export class PatientPortalService {
       completedCount,
       clinicsVisited,
       unreadNotifications: unread,
+      favoritesCount,
     };
   }
 

@@ -27,12 +27,17 @@ services:
       PORT: 3333
       NODE_ENV: production
       TZ: America/Sao_Paulo
+      # Dentro do container o backend fala com o serviço "mysql" na porta interna 3306
       DATABASE_URL: mysql://cronocita:cronocita@mysql:3306/cronocita
       JWT_SECRET: cronocita-access-secret-change-me
       JWT_REFRESH_SECRET: cronocita-refresh-secret-change-me
       JWT_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN_DAYS: 7
-      NOTIFICATION_PROVIDER: whatsapp
+      # WhatsApp automático (notificações do sistema — chat in-app não usa isto)
+      NOTIFICATION_PROVIDER: evolution
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-http://host.docker.internal:8080}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-change-me-evolution-key}
+      EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-cronocita}
     ports:
       - '3333:3333'
     volumes:

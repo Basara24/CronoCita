@@ -5,6 +5,7 @@ import type { Role } from '@/types';
 export function defaultRouteForRole(role: Role): string {
   if (role === 'SUPER_ADMIN') return '/admin';
   if (role === 'PATIENT') return '/minha-conta';
+  if (role === 'PROFESSIONAL') return '/profissional';
   return '/painel/agenda';
 }
 

@@ -5,6 +5,7 @@ import { ensureRole } from '../../shared/middleware/ensureRole';
 import { validateBody } from '../../shared/middleware/validate';
 import { avatarUpload } from '../../shared/upload/multer';
 import { patientPortalController } from './patient-portal.controller';
+import { favoritesController } from '../favorites/favorites.controller';
 import { changePasswordSchema, updateProfileSchema } from './patient-portal.validators';
 
 /**
@@ -28,3 +29,7 @@ patientPortalRoutes.post('/avatar', avatarUpload.single('avatar'), asyncHandler(
 patientPortalRoutes.get('/notifications', asyncHandler(patientPortalController.listNotifications));
 patientPortalRoutes.patch('/notifications/read-all', asyncHandler(patientPortalController.markAllNotificationsRead));
 patientPortalRoutes.patch('/notifications/:id/read', asyncHandler(patientPortalController.markNotificationRead));
+
+patientPortalRoutes.get('/favorites', asyncHandler(favoritesController.list));
+patientPortalRoutes.post('/favorites/:clinicId', asyncHandler(favoritesController.add));
+patientPortalRoutes.delete('/favorites/:clinicId', asyncHandler(favoritesController.remove));

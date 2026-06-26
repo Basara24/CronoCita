@@ -1,7 +1,18 @@
 import { prisma } from '../../shared/database/prisma';
-import { NotFoundError } from '../../shared/errors/AppError';
+import { ForbiddenError, NotFoundError } from '../../shared/errors/AppError';
 import { emitToUser } from '../../shared/realtime/io';
 import { userNotificationService } from '../notifications/userNotification.service';
+import { professionalPortalService } from '../professional-portal/professional-portal.service';
+
+interface SendMessageInput {
+  senderId: string;
+  senderRole: string;
+  receiverId: string;
+  content?: string;
+  appointmentId?: string | null;
+  attachmentUrl?: string | null;
+  isImportant?: boolean;
+}
 
 const userSelect = {
   id: true,
@@ -71,14 +82,30 @@ export class MessagesService {
     return { user: other, messages };
   }
 
-  async send(senderId: string, receiverId: string, content: string, appointmentId?: string | null) {
+  async send(input: SendMessageInput) {
+    const { senderId, senderRole, receiverId } = input;
     const receiver = await prisma.user.findUnique({ where: { id: receiverId }, select: userSelect });
     if (!receiver) throw new NotFoundError('Destinatário não encontrado');
+
+    // Restrição: profissional só conversa com pacientes que já atendeu.
+    if (senderRole === 'PROFESSIONAL' && receiver.role === 'PATIENT') {
+      const attended = await professionalPortalService.hasAttended(senderId, receiverId);
+      if (!attended) {
+        throw new ForbiddenError('Você só pode enviar mensagens a pacientes já atendidos.');
+      }
+    }
 
     const sender = await prisma.user.findUnique({ where: { id: senderId }, select: userSelect });
 
     const message = await prisma.message.create({
-      data: { senderId, receiverId, content, appointmentId: appointmentId ?? null },
+      data: {
+        senderId,
+        receiverId,
+        content: input.content ?? '',
+        appointmentId: input.appointmentId ?? null,
+        attachmentUrl: input.attachmentUrl ?? null,
+        isImportant: input.isImportant ?? false,
+      },
     });
 
     // Emite em tempo real para ambas as pontas
@@ -94,6 +121,15 @@ export class MessagesService {
     });
 
     return message;
+  }
+
+  /** Marca/desmarca uma mensagem como importante (apenas participante pode). */
+  async toggleImportant(userId: string, messageId: string, isImportant: boolean) {
+    const message = await prisma.message.findFirst({
+      where: { id: messageId, OR: [{ senderId: userId }, { receiverId: userId }] },
+    });
+    if (!message) throw new NotFoundError('Mensagem não encontrada');
+    return prisma.message.update({ where: { id: messageId }, data: { isImportant } });
   }
 }
 

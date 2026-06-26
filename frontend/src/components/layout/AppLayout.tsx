@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   MessageSquare,
+  Settings,
   Stethoscope,
   Users,
   Wallet,
@@ -18,6 +19,7 @@ import {
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import type { Role } from '@/types';
 
 interface NavItem {
@@ -29,14 +31,15 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/painel', label: 'Dashboard', icon: LayoutDashboard, roles: ['CLINIC_ADMIN'] },
-  { to: '/painel/agenda', label: 'Agenda', icon: CalendarDays, roles: ['CLINIC_ADMIN', 'SECRETARY', 'PROFESSIONAL'] },
+  { to: '/painel/agenda', label: 'Agenda', icon: CalendarDays, roles: ['CLINIC_ADMIN', 'SECRETARY'] },
   { to: '/painel/pacientes', label: 'Pacientes', icon: Users, roles: ['CLINIC_ADMIN', 'SECRETARY'] },
   { to: '/painel/profissionais', label: 'Profissionais', icon: Stethoscope, roles: ['CLINIC_ADMIN'] },
   { to: '/painel/salas', label: 'Salas', icon: DoorOpen, roles: ['CLINIC_ADMIN'] },
   { to: '/painel/equipamentos', label: 'Equipamentos', icon: Box, roles: ['CLINIC_ADMIN'] },
   { to: '/painel/servicos', label: 'Serviços', icon: ClipboardList, roles: ['CLINIC_ADMIN'] },
-  { to: '/painel/mensagens', label: 'Mensagens', icon: MessageSquare, roles: ['CLINIC_ADMIN', 'PROFESSIONAL'] },
-  { to: '/painel/financeiro', label: 'Financeiro', icon: Wallet, roles: ['CLINIC_ADMIN', 'PROFESSIONAL'] },
+  { to: '/painel/configuracoes', label: 'Configurações', icon: Settings, roles: ['CLINIC_ADMIN'] },
+  { to: '/painel/mensagens', label: 'Mensagens', icon: MessageSquare, roles: ['CLINIC_ADMIN'] },
+  { to: '/painel/financeiro', label: 'Financeiro', icon: Wallet, roles: ['CLINIC_ADMIN'] },
   { to: '/painel/relatorios', label: 'Relatórios', icon: BarChart3, roles: ['CLINIC_ADMIN'] },
 ];
 
@@ -64,14 +67,17 @@ export function AppLayout() {
 
   const sidebar = (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center gap-2 border-b px-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <CalendarDays className="h-5 w-5" />
+      <div className="flex h-16 items-center justify-between gap-2 border-b px-5">
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <CalendarDays className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-base font-bold leading-none text-primary">CronoCita</p>
+            <p className="text-[11px] text-muted-foreground">Gestão de clínicas</p>
+          </div>
         </div>
-        <div>
-          <p className="text-base font-bold leading-none text-primary">CronoCita</p>
-          <p className="text-[11px] text-muted-foreground">Gestão de clínicas</p>
-        </div>
+        <ThemeToggle />
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
