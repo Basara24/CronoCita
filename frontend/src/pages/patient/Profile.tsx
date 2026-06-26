@@ -6,7 +6,10 @@ import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MaskedInput } from '@/components/ui/masked-input';
 import { Label } from '@/components/ui/label';
+import { applyMask } from '@/lib/masks';
+import { digitsOnly } from '@/lib/validators/zodBr';
 import { Card, CardContent } from '@/components/ui/card';
 import type { PatientProfile } from '@/types';
 import { PatientAppointmentsPage } from './Appointments';
@@ -116,7 +119,7 @@ function PersonalDataForm({ onSaved }: { onSaved: (p: { name: string; phone: str
   useEffect(() => {
     if (data) {
       setName(data.name);
-      setPhone(data.phone ?? '');
+      setPhone(data.phone ? applyMask('phone', data.phone) : '');
       setAddress(data.address ?? '');
     }
   }, [data]);
@@ -126,7 +129,7 @@ function PersonalDataForm({ onSaved }: { onSaved: (p: { name: string; phone: str
     setMessage(null);
     setError(null);
     try {
-      await api.put('/me/profile', { name, phone, address });
+      await api.put('/me/profile', { name, phone: digitsOnly(phone), address });
       onSaved({ name, phone });
       setMessage('Dados atualizados com sucesso.');
     } catch (err) {
@@ -149,7 +152,7 @@ function PersonalDataForm({ onSaved }: { onSaved: (p: { name: string; phone: str
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="phone">Telefone</Label>
-          <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <MaskedInput id="phone" mask="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="address">Endereço</Label>

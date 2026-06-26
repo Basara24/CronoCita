@@ -1,17 +1,18 @@
 import { z } from 'zod';
+import { zCpf, zNonEmptyString, zPhone } from '../../shared/validators/zodBr';
 
 export const loginSchema = z.object({
-  email: z.string().email('E-mail inválido'),
-  password: z.string().min(1, 'Senha é obrigatória'),
+  email: z.string().trim().min(1, 'E-mail é obrigatório').email('E-mail inválido'),
+  password: zNonEmptyString('Senha é obrigatória'),
 });
 
 export const registerSchema = z
   .object({
-    name: z.string().min(3, 'Nome deve ter ao menos 3 caracteres'),
-    email: z.string().email('E-mail inválido'),
-    cpf: z.string().min(11, 'CPF inválido').max(14, 'CPF inválido'),
-    phone: z.string().min(8, 'Telefone inválido'),
-    birthDate: z.string().min(1, 'Data de nascimento é obrigatória'),
+    name: zNonEmptyString('Nome é obrigatório').min(3, 'Nome deve ter ao menos 3 caracteres'),
+    email: z.string().trim().min(1, 'E-mail é obrigatório').email('E-mail inválido'),
+    cpf: zCpf(),
+    phone: zPhone(),
+    birthDate: zNonEmptyString('Data de nascimento é obrigatória'),
     password: z.string().min(8, 'Senha deve ter ao menos 8 caracteres'),
     confirmPassword: z.string().min(8, 'Confirme a senha'),
     acceptedTerms: z.literal(true, {
@@ -24,14 +25,14 @@ export const registerSchema = z
   });
 
 export const refreshSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token é obrigatório'),
+  refreshToken: zNonEmptyString('Refresh token é obrigatório'),
 });
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email('E-mail inválido'),
+  email: z.string().trim().min(1, 'E-mail é obrigatório').email('E-mail inválido'),
 });
 
 export const resetPasswordSchema = z.object({
-  token: z.string().min(1, 'Token é obrigatório'),
+  token: zNonEmptyString('Token é obrigatório'),
   password: z.string().min(6, 'Senha deve ter ao menos 6 caracteres'),
 });

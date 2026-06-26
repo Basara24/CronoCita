@@ -6,7 +6,10 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MaskedInput } from '@/components/ui/masked-input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { applyMask } from '@/lib/masks';
+import { digitsOnly } from '@/lib/validators/zodBr';
 import { useToast } from '@/components/ui/toast';
 import type { ClinicPhotoCategory, ClinicSelf } from '@/types';
 
@@ -83,7 +86,7 @@ function IdentityTab({ clinic, onSaved, toast }: { clinic: ClinicSelf; onSaved: 
   const [form, setForm] = useState({
     name: clinic.name,
     description: clinic.description ?? '',
-    phone: clinic.phone,
+    phone: applyMask('phone', clinic.phone),
     email: clinic.email,
     logoUrl: clinic.logoUrl ?? '',
     coverImageUrl: clinic.coverImageUrl ?? '',
@@ -93,7 +96,7 @@ function IdentityTab({ clinic, onSaved, toast }: { clinic: ClinicSelf; onSaved: 
   });
 
   const saveMut = useMutation({
-    mutationFn: async () => api.put('/clinics/me', form),
+    mutationFn: async () => api.put('/clinics/me', { ...form, phone: digitsOnly(form.phone) }),
     onSuccess: () => {
       toast.success('Identidade visual atualizada');
       onSaved();
@@ -148,7 +151,7 @@ function IdentityTab({ clinic, onSaved, toast }: { clinic: ClinicSelf; onSaved: 
         </div>
         <div>
           <label className="text-xs text-muted-foreground">Telefone</label>
-          <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <MaskedInput mask="phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-9999" />
         </div>
         <div>
           <label className="text-xs text-muted-foreground">E-mail</label>
@@ -255,7 +258,7 @@ function PhotosTab({ clinic, onChanged, toast }: { clinic: ClinicSelf; onChanged
 
 function LocationTab({ clinic, onSaved, toast }: { clinic: ClinicSelf; onSaved: () => void; toast: ToastApi }) {
   const [form, setForm] = useState({
-    zipCode: clinic.zipCode,
+    zipCode: applyMask('cep', clinic.zipCode),
     address: clinic.address,
     city: clinic.city,
     state: clinic.state,
@@ -266,7 +269,7 @@ function LocationTab({ clinic, onSaved, toast }: { clinic: ClinicSelf; onSaved: 
   const saveMut = useMutation({
     mutationFn: async () =>
       api.put('/clinics/me', {
-        zipCode: form.zipCode,
+        zipCode: digitsOnly(form.zipCode),
         address: form.address,
         city: form.city,
         state: form.state,
@@ -287,7 +290,7 @@ function LocationTab({ clinic, onSaved, toast }: { clinic: ClinicSelf; onSaved: 
       <CardContent className="grid gap-4 p-5 sm:grid-cols-2">
         <div>
           <label className="text-xs text-muted-foreground">CEP</label>
-          <Input value={form.zipCode} onChange={(e) => setForm({ ...form, zipCode: e.target.value })} />
+          <MaskedInput mask="cep" value={form.zipCode} onChange={(e) => setForm({ ...form, zipCode: e.target.value })} placeholder="00000-000" />
         </div>
         <div>
           <label className="text-xs text-muted-foreground">Endereço (rua e número)</label>

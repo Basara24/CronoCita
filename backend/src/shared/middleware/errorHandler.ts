@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { AppError } from '../errors/AppError';
+import { logger } from '../logger/logger';
 
 export function errorHandler(
   err: Error,
@@ -22,6 +23,6 @@ export function errorHandler(
     return;
   }
 
-  console.error(err);
+  logger.error({ err }, 'Erro interno do servidor');
   res.status(500).json({ status: 'error', message: 'Erro interno do servidor' });
 }

@@ -6,6 +6,7 @@ import { createApp } from './app';
 import { authConfig } from './shared/utils/authConfig';
 import { setIO, userRoom } from './shared/realtime/io';
 import { startReminderJobs } from './modules/notifications/reminderJobs';
+import { logger } from './shared/logger/logger';
 
 const port = Number(process.env.PORT ?? 3333);
 
@@ -39,6 +40,6 @@ io.on('connection', (socket) => {
 setIO(io);
 
 server.listen(port, () => {
-  console.log(`🏥 CronoCita API rodando em http://localhost:${port}`);
+  logger.info({ port }, 'CronoCita API iniciada');
   startReminderJobs();
 });

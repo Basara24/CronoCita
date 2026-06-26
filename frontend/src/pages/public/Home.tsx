@@ -201,7 +201,7 @@ export function Home() {
             </p>
             <div className="mt-6 space-y-3 text-sm">
               <p className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-primary" /> (44) 3333-0000
+                <Phone className="h-4 w-4 text-primary" /> (44) 9 9183-6230
               </p>
               <p className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-primary" /> contato@cronocita.com

@@ -1,5 +1,6 @@
 import { Patient } from '@prisma/client';
 import { AppError, NotFoundError } from '../../shared/errors/AppError';
+import { logger } from '../../shared/logger/logger';
 import { IPatientsRepository } from './patients.repository';
 import { CreatePatientDTO, UpdatePatientDTO } from './patients.dtos';
 
@@ -23,7 +24,12 @@ export class PatientsService {
     const byEmail = await this.repository.findByEmail(clinicId, data.email);
     if (byEmail) throw new AppError('E-mail já cadastrado', 409);
 
-    return this.repository.create(clinicId, { ...data, birthDate: new Date(data.birthDate) });
+    const patient = await this.repository.create(clinicId, {
+      ...data,
+      birthDate: new Date(data.birthDate),
+    });
+    logger.info({ clinicId, patientId: patient.id, action: 'create' }, 'Paciente criado');
+    return patient;
   }
 
   async update(clinicId: string, id: string, data: UpdatePatientDTO): Promise<Patient> {
@@ -38,14 +44,17 @@ export class PatientsService {
       if (byEmail && byEmail.id !== id) throw new AppError('E-mail já cadastrado', 409);
     }
 
-    return this.repository.update(id, {
+    const patient = await this.repository.update(id, {
       ...data,
       birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
     });
+    logger.info({ clinicId, patientId: id, action: 'update' }, 'Paciente atualizado');
+    return patient;
   }
 
   async delete(clinicId: string, id: string): Promise<void> {
     await this.getById(clinicId, id);
     await this.repository.delete(id);
+    logger.info({ clinicId, patientId: id, action: 'delete' }, 'Paciente removido');
   }
 }

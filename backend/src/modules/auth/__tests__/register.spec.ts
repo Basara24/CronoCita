@@ -6,7 +6,7 @@ function makeUser(overrides: Partial<UserWithClinic> = {}): UserWithClinic {
     id: 'user-1',
     name: 'João Pereira',
     email: 'joao@cliente.com',
-    cpf: '111.111.111-11',
+    cpf: '52998224725',
     phone: '(44) 90000-0000',
     avatarUrl: null,
     password: 'hashed',
@@ -39,7 +39,7 @@ function makeRepository(): jest.Mocked<IAuthRepository> {
 const registerInput = {
   name: 'João Pereira',
   email: 'joao@cliente.com',
-  cpf: '111.111.111-11',
+  cpf: '52998224725',
   phone: '(44) 90000-0000',
   birthDate: '1990-03-15',
   password: 'senha12345',

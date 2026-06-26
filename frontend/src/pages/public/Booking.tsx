@@ -11,8 +11,11 @@ import { useAuth } from '@/lib/auth';
 import { cn, formatCurrency, formatDateTime, formatTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MaskedInput } from '@/components/ui/masked-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { applyMask } from '@/lib/masks';
+import { digitsOnly, zCpf, zNonEmptyString, zPhone } from '@/lib/validators/zodBr';
 
 interface PublicProfessional {
   id: string;
@@ -28,10 +31,10 @@ interface PublicService {
 }
 
 const patientSchema = z.object({
-  name: z.string().min(3, 'Informe seu nome completo'),
-  cpf: z.string().min(11, 'CPF inválido'),
-  email: z.string().email('E-mail inválido'),
-  phone: z.string().min(8, 'Telefone inválido'),
+  name: zNonEmptyString('Informe seu nome completo').min(3, 'Informe seu nome completo'),
+  cpf: zCpf(),
+  email: z.string().trim().min(1, 'E-mail é obrigatório').email('E-mail inválido'),
+  phone: zPhone(),
 });
 
 type PatientForm = z.infer<typeof patientSchema>;
@@ -127,9 +130,9 @@ export function PublicBooking() {
       user && user.role === 'PATIENT'
         ? {
             name: user.name,
-            cpf: user.cpf ?? '',
+            cpf: user.cpf ? applyMask('cpf', user.cpf) : '',
             email: user.email,
-            phone: user.phone ?? '',
+            phone: user.phone ? applyMask('phone', user.phone) : '',
           }
         : undefined,
   });
@@ -143,7 +146,11 @@ export function PublicBooking() {
         professionalId: professional.id,
         serviceId: service.id,
         startsAt: slot,
-        patient,
+        patient: {
+          ...patient,
+          cpf: digitsOnly(patient.cpf),
+          phone: digitsOnly(patient.phone),
+        },
       });
       setConfirmation({ startsAt: data.startsAt });
       setStep('done');
@@ -366,12 +373,12 @@ export function PublicBooking() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>CPF</Label>
-                    <Input data-cy="patient-cpf" placeholder="000.000.000-00" {...register('cpf')} />
+                    <MaskedInput data-cy="patient-cpf" mask="cpf" placeholder="000.000.000-00" {...register('cpf')} />
                     {errors.cpf && <p className="text-xs text-destructive">{errors.cpf.message}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label>Telefone</Label>
-                    <Input data-cy="patient-phone" placeholder="(11) 99999-9999" {...register('phone')} />
+                    <MaskedInput data-cy="patient-phone" mask="phone" placeholder="(11) 99999-9999" {...register('phone')} />
                     {errors.phone && (
                       <p className="text-xs text-destructive">{errors.phone.message}</p>
                     )}
@@ -420,7 +427,7 @@ export function PublicBooking() {
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Você receberá um lembrete pelo WhatsApp antes da consulta.
+                Você receberá um lembrete pelo CronoCita antes da consulta.
               </p>
               <Button
                 variant="outline"

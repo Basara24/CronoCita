@@ -9,16 +9,18 @@ import { apiErrorMessage } from '@/lib/api';
 import { defaultRouteForRole } from '@/components/layout/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MaskedInput } from '@/components/ui/masked-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { zBrDate, zCpf, zNonEmptyString, zPhone, digitsOnly, parseBrDateToISO } from '@/lib/validators/zodBr';
 
 const registerSchema = z
   .object({
-    name: z.string().min(3, 'Informe seu nome completo'),
-    cpf: z.string().min(11, 'CPF inválido'),
-    birthDate: z.string().min(1, 'Informe a data de nascimento'),
-    phone: z.string().min(8, 'Telefone inválido'),
-    email: z.string().email('E-mail inválido'),
+    name: zNonEmptyString('Informe seu nome completo').min(3, 'Informe seu nome completo'),
+    cpf: zCpf(),
+    birthDate: zBrDate('Informe a data de nascimento'),
+    phone: zPhone(),
+    email: z.string().trim().min(1, 'E-mail é obrigatório').email('E-mail inválido'),
     password: z.string().min(8, 'A senha deve ter ao menos 8 caracteres'),
     confirmPassword: z.string().min(8, 'Confirme a senha'),
     acceptedTerms: z.boolean().refine((v) => v, 'É necessário aceitar os termos'),
@@ -47,9 +49,9 @@ export function Register() {
       const user = await signUp({
         name: data.name,
         email: data.email,
-        cpf: data.cpf,
-        phone: data.phone,
-        birthDate: data.birthDate,
+        cpf: digitsOnly(data.cpf),
+        phone: digitsOnly(data.phone),
+        birthDate: parseBrDateToISO(data.birthDate),
         password: data.password,
         confirmPassword: data.confirmPassword,
         acceptedTerms: true,
@@ -81,12 +83,12 @@ export function Register() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="cpf">CPF</Label>
-                <Input id="cpf" data-cy="register-cpf" placeholder="000.000.000-00" {...register('cpf')} />
+                <MaskedInput id="cpf" mask="cpf" data-cy="register-cpf" placeholder="000.000.000-00" {...register('cpf')} />
                 {errors.cpf && <p className="text-xs text-destructive">{errors.cpf.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="birthDate">Data de nascimento</Label>
-                <Input id="birthDate" type="date" data-cy="register-birth" {...register('birthDate')} />
+                <MaskedInput id="birthDate" mask="date" data-cy="register-birth" placeholder="DD/MM/AAAA" {...register('birthDate')} />
                 {errors.birthDate && <p className="text-xs text-destructive">{errors.birthDate.message}</p>}
               </div>
             </div>
@@ -94,7 +96,7 @@ export function Register() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="phone">Telefone</Label>
-                <Input id="phone" data-cy="register-phone" placeholder="(11) 99999-9999" {...register('phone')} />
+                <MaskedInput id="phone" mask="phone" data-cy="register-phone" placeholder="(11) 99999-9999" {...register('phone')} />
                 {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
               </div>
               <div className="space-y-1.5">

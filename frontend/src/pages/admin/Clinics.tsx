@@ -5,11 +5,14 @@ import { z } from 'zod';
 import { ExternalLink, Loader2, Pencil, Plus, Power, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiErrorMessage } from '@/lib/api';
+import { applyMask } from '@/lib/masks';
+import { digitsOnly, zCep, zCnpj, zNonEmptyString, zPhone } from '@/lib/validators/zodBr';
 import { useCrud } from '@/hooks/useCrud';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MaskedInput } from '@/components/ui/masked-input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -30,16 +33,16 @@ import {
 import { SPECIALTY_OPTIONS, type Clinic } from '@/types';
 
 const clinicSchema = z.object({
-  name: z.string().min(2, 'Nome obrigatório'),
-  cnpj: z.string().min(11, 'CNPJ inválido'),
-  email: z.string().email('E-mail inválido'),
-  phone: z.string().min(8, 'Telefone inválido'),
+  name: zNonEmptyString('Nome obrigatório').min(2, 'Nome obrigatório'),
+  cnpj: zCnpj(),
+  email: z.string().trim().min(1, 'E-mail é obrigatório').email('E-mail inválido'),
+  phone: zPhone(),
   description: z.string().optional(),
   logoUrl: z.string().url('URL inválida').optional().or(z.literal('')),
-  address: z.string().min(3, 'Endereço obrigatório'),
-  city: z.string().min(2, 'Cidade obrigatória'),
-  state: z.string().min(2, 'UF obrigatória'),
-  zipCode: z.string().min(5, 'CEP inválido'),
+  address: zNonEmptyString('Endereço obrigatório').min(3, 'Endereço obrigatório'),
+  city: zNonEmptyString('Cidade obrigatória').min(2, 'Cidade obrigatória'),
+  state: zNonEmptyString('UF obrigatória').min(2, 'UF obrigatória'),
+  zipCode: zCep(),
   adminName: z.string().optional(),
   adminEmail: z.string().email('E-mail inválido').optional().or(z.literal('')),
   adminPassword: z.string().optional(),
@@ -111,15 +114,15 @@ export function Clinics() {
     setSpecialties(clinic.specialties.map((s) => s.specialty));
     reset({
       name: clinic.name,
-      cnpj: clinic.cnpj,
+      cnpj: applyMask('cnpj', clinic.cnpj),
       email: clinic.email,
-      phone: clinic.phone,
+      phone: applyMask('phone', clinic.phone),
       description: clinic.description ?? '',
       logoUrl: clinic.logoUrl ?? '',
       address: clinic.address,
       city: clinic.city,
       state: clinic.state,
-      zipCode: clinic.zipCode,
+      zipCode: applyMask('cep', clinic.zipCode),
     });
     setOpen(true);
   }
@@ -134,15 +137,15 @@ export function Clinics() {
     setError(null);
     const payload: ClinicPayload = {
       name: data.name,
-      cnpj: data.cnpj,
+      cnpj: digitsOnly(data.cnpj),
       email: data.email,
-      phone: data.phone,
+      phone: digitsOnly(data.phone),
       description: data.description || undefined,
       logoUrl: data.logoUrl || undefined,
       address: data.address,
       city: data.city,
       state: data.state,
-      zipCode: data.zipCode,
+      zipCode: digitsOnly(data.zipCode),
       specialties,
     };
 
@@ -276,12 +279,12 @@ export function Clinics() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>CNPJ</Label>
-                <Input data-cy="clinic-cnpj" {...register('cnpj')} />
+                <MaskedInput mask="cnpj" data-cy="clinic-cnpj" placeholder="00.000.000/0000-00" {...register('cnpj')} />
                 {errors.cnpj && <p className="text-xs text-destructive">{errors.cnpj.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>Telefone</Label>
-                <Input {...register('phone')} />
+                <MaskedInput mask="phone" placeholder="(11) 99999-9999" {...register('phone')} />
                 {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
               </div>
             </div>
@@ -311,7 +314,7 @@ export function Clinics() {
               </div>
               <div className="space-y-1.5">
                 <Label>CEP</Label>
-                <Input {...register('zipCode')} />
+                <MaskedInput mask="cep" placeholder="00000-000" {...register('zipCode')} />
                 {errors.zipCode && <p className="text-xs text-destructive">{errors.zipCode.message}</p>}
               </div>
             </div>

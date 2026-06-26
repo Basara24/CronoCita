@@ -4,10 +4,22 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { apiErrorMessage } from '@/lib/api';
+import { applyMask } from '@/lib/masks';
 import { formatDate } from '@/lib/utils';
+import {
+  digitsOnly,
+  isoToBrDate,
+  parseBrDateToISO,
+  zBrDate,
+  zCep,
+  zCpf,
+  zNonEmptyString,
+  zPhone,
+} from '@/lib/validators/zodBr';
 import { useCrud } from '@/hooks/useCrud';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MaskedInput } from '@/components/ui/masked-input';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -27,18 +39,28 @@ import {
 import type { Patient } from '@/types';
 
 const patientSchema = z.object({
-  name: z.string().min(3, 'Nome deve ter ao menos 3 caracteres'),
-  cpf: z.string().min(11, 'CPF inválido'),
-  email: z.string().email('E-mail inválido'),
-  phone: z.string().min(8, 'Telefone inválido'),
-  birthDate: z.string().min(1, 'Informe a data de nascimento'),
+  name: zNonEmptyString('Nome é obrigatório').min(3, 'Nome deve ter ao menos 3 caracteres'),
+  cpf: zCpf(),
+  email: z.string().trim().min(1, 'E-mail é obrigatório').email('E-mail inválido'),
+  phone: zPhone(),
+  birthDate: zBrDate('Informe a data de nascimento'),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
-  zipCode: z.string().optional(),
+  zipCode: z.string().optional().refine((v) => !v || zCep().safeParse(v).success, 'CEP inválido'),
 });
 
 type PatientForm = z.infer<typeof patientSchema>;
+
+function toApiPayload(data: PatientForm): PatientForm {
+  return {
+    ...data,
+    cpf: digitsOnly(data.cpf),
+    phone: digitsOnly(data.phone),
+    birthDate: parseBrDateToISO(data.birthDate),
+    zipCode: data.zipCode ? digitsOnly(data.zipCode) : undefined,
+  };
+}
 
 export function Patients() {
   const { listQuery, createMutation, updateMutation, deleteMutation } = useCrud<Patient, PatientForm>('patients');
@@ -66,25 +88,26 @@ export function Patients() {
     setError(null);
     reset({
       name: patient.name,
-      cpf: patient.cpf,
+      cpf: applyMask('cpf', patient.cpf),
       email: patient.email,
-      phone: patient.phone,
-      birthDate: patient.birthDate.slice(0, 10),
+      phone: applyMask('phone', patient.phone),
+      birthDate: isoToBrDate(patient.birthDate),
       address: patient.address ?? '',
       city: patient.city ?? '',
       state: patient.state ?? '',
-      zipCode: patient.zipCode ?? '',
+      zipCode: patient.zipCode ? applyMask('cep', patient.zipCode) : '',
     });
     setOpen(true);
   }
 
   async function onSubmit(data: PatientForm) {
     setError(null);
+    const payload = toApiPayload(data);
     try {
       if (editing) {
-        await updateMutation.mutateAsync({ id: editing.id, data });
+        await updateMutation.mutateAsync({ id: editing.id, data: payload });
       } else {
-        await createMutation.mutateAsync(data);
+        await createMutation.mutateAsync(payload);
       }
       setOpen(false);
     } catch (err) {
@@ -144,9 +167,9 @@ export function Patients() {
           {patients.map((p) => (
             <TableRow key={p.id}>
               <TableCell className="font-medium">{p.name}</TableCell>
-              <TableCell>{p.cpf}</TableCell>
+              <TableCell>{applyMask('cpf', p.cpf)}</TableCell>
               <TableCell className="hidden md:table-cell">{p.email}</TableCell>
-              <TableCell className="hidden md:table-cell">{p.phone}</TableCell>
+              <TableCell className="hidden md:table-cell">{applyMask('phone', p.phone)}</TableCell>
               <TableCell className="hidden lg:table-cell">{formatDate(p.birthDate)}</TableCell>
               <TableCell>
                 <div className="flex gap-1">
@@ -184,12 +207,12 @@ export function Patients() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>CPF</Label>
-                <Input placeholder="000.000.000-00" {...register('cpf')} />
+                <MaskedInput mask="cpf" placeholder="000.000.000-00" {...register('cpf')} />
                 {errors.cpf && <p className="text-xs text-destructive">{errors.cpf.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>Nascimento</Label>
-                <Input type="date" {...register('birthDate')} />
+                <MaskedInput mask="date" placeholder="DD/MM/AAAA" {...register('birthDate')} />
                 {errors.birthDate && (
                   <p className="text-xs text-destructive">{errors.birthDate.message}</p>
                 )}
@@ -203,7 +226,7 @@ export function Patients() {
               </div>
               <div className="space-y-1.5">
                 <Label>Telefone</Label>
-                <Input {...register('phone')} />
+                <MaskedInput mask="phone" placeholder="(11) 99999-9999" {...register('phone')} />
                 {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
               </div>
             </div>
@@ -222,7 +245,8 @@ export function Patients() {
               </div>
               <div className="space-y-1.5">
                 <Label>CEP</Label>
-                <Input {...register('zipCode')} />
+                <MaskedInput mask="cep" placeholder="00000-000" {...register('zipCode')} />
+                {errors.zipCode && <p className="text-xs text-destructive">{errors.zipCode.message}</p>}
               </div>
             </div>
 

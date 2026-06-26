@@ -302,6 +302,27 @@ Rotas `/profissional/*` (role `PROFESSIONAL`, escopo por `professional.userId`):
 
 ---
 
+## Conformidade com rubrica acadêmica
+
+Documentação e evidências para avaliação:
+
+| Documento | Conteúdo |
+|---|---|
+| [`docs/RUBRICA.md`](docs/RUBRICA.md) | Checklist item a item com links para código |
+| [`docs/modelagem.md`](docs/modelagem.md) | DER + Diagrama de Classes (Mermaid) |
+| [`docs/APRESENTACAO-BANCA.md`](docs/APRESENTACAO-BANCA.md) | Roteiro de demo e respostas técnicas |
+
+Destaques implementados:
+
+- **Testes:** CRUD de Pacientes com testes **unitários** + **integração HTTP** (`patients.service.spec.ts`, `patients.int.spec.ts`)
+- **Observabilidade:** logger **Pino** + middleware de requisição (`LOG_LEVEL` no `.env`)
+- **Validação:** CPF/CNPJ com dígitos verificadores (backend + frontend)
+- **Máscaras:** componente `MaskedInput` (CPF, CNPJ, telefone, CEP, data)
+- **SOLID:** SRP (camadas) + DIP (interfaces de repositório) — ver `docs/modelagem.md`
+- **Segurança:** JWT, RBAC, multi-tenant, bcrypt, Zod, Helmet
+
+---
+
 ## 🧪 Testes
 
 ### Backend (Jest + Supertest)
@@ -317,6 +338,7 @@ Cobertura dos pontos críticos:
 - `calculateCommission()` — cálculo correto (200 × 70% → 140/60)
 - `canCancel()` — validação das 2 horas de antecedência
 - `ContactsService` e `FavoritesService` — criação/listagem/status e favoritar/remover
+- **CRUD Pacientes** — unitário (`PatientsService`) + integração HTTP (Supertest, todas as rotas)
 - Integração HTTP (Supertest): autenticação, validação e conflito `409`
 
 ### E2E (Cypress)

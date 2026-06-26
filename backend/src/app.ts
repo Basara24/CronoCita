@@ -1,7 +1,9 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { UPLOAD_ROOT } from './shared/upload/multer';
 import { errorHandler } from './shared/middleware/errorHandler';
+import { requestLogger } from './shared/middleware/requestLogger';
 import { authRoutes } from './modules/auth/auth.routes';
 import { usersRoutes } from './modules/users/users.routes';
 import { patientsRoutes } from './modules/patients/patients.routes';
@@ -24,8 +26,10 @@ import { professionalPortalRoutes } from './modules/professional-portal/professi
 export function createApp(): express.Express {
   const app = express();
 
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(cors());
   app.use(express.json());
+  app.use(requestLogger);
 
   // Arquivos enviados (avatares) servidos estaticamente
   app.use('/uploads', express.static(UPLOAD_ROOT));

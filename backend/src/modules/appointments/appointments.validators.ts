@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { zCpf, zPhone } from '../../shared/validators/zodBr';
 
 const isoDate = z
   .string()
@@ -31,9 +32,9 @@ export const publicBookingSchema = z.object({
   startsAt: isoDate,
   patient: z.object({
     name: z.string().min(3, 'Nome deve ter ao menos 3 caracteres'),
-    cpf: z.string().min(11, 'CPF inválido'),
-    email: z.string().email('E-mail inválido'),
-    phone: z.string().min(8, 'Telefone inválido'),
+    cpf: zCpf(),
+    email: z.string().trim().min(1, 'E-mail é obrigatório').email('E-mail inválido'),
+    phone: zPhone(),
     birthDate: z.string().optional(),
   }),
 });
